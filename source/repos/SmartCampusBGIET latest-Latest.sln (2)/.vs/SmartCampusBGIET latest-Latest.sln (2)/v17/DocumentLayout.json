@@ -1,0 +1,120 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\admin\\source\\repos\\SmartCampusBGIET latest-Latest.sln (2)\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\app_code\\vb\\class1.vb||{2C015C70-C72C-11D0-88C3-00A0C9110049}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\admissionnew.aspx.vb||{2C015C70-C72C-11D0-88C3-00A0C9110049}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\.vs\\smartcampusbgiet latest-latest\\config\\applicationhost.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\masteradmin.master.vb||{2C015C70-C72C-11D0-88C3-00A0C9110049}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\admissionnew.aspx||{57312C73-6202-49E9-B1E1-40EA1A6DC1F6}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DCA7B0AD-A21A-4295-AAA2-CCD4F1F8177D}|D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest|d:\\yogeshdotnetdeveloper\\new latest all college\\bgiet\\erp\\smartcampusbgiet latest-latest\\web.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Class1.vb",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\App_Code\\vb\\Class1.vb",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\App_Code\\vb\\Class1.vb",
+              "ViewState": "AQIAAB8AAAAAAAAAAAAqwCcAAAAJAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003361|",
+              "WhenOpened": "2025-04-23T09:47:10.418Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MasterAdmin.master.vb",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\MasterAdmin.master.vb",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\MasterAdmin.master.vb",
+              "ViewState": "AQIAADMBAAAAAAAAAAAvwE4BAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003361|",
+              "WhenOpened": "2025-04-23T09:46:32.077Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "applicationhost.config",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\.vs\\SmartCampusBGIET latest-Latest\\config\\applicationhost.config",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\.vs\\SmartCampusBGIET latest-Latest\\config\\applicationhost.config",
+              "ViewState": "AQIAAMwAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
+              "WhenOpened": "2025-04-23T09:41:19.444Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "web.config",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\web.config",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\web.config",
+              "ViewState": "AQIAAJkAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
+              "WhenOpened": "2025-04-21T11:12:55.568Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AdmissionNew.aspx.vb",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\AdmissionNew.aspx.vb",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\AdmissionNew.aspx.vb",
+              "ViewState": "AQIAAFEGAAAAAAAAAAAvwFgGAAAOAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003361|",
+              "WhenOpened": "2025-04-19T12:12:38.904Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AdmissionNew.aspx",
+              "DocumentMoniker": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\AdmissionNew.aspx",
+              "ToolTip": "D:\\YogeshDotNetDeveloper\\New latest all college\\bgiet\\Erp\\SmartCampusBGIET latest-Latest\\AdmissionNew.aspx",
+              "LogicalView": "7651a703-06e5-11d1-8ebd-00a0c90f26ea",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000195|",
+              "WhenOpened": "2025-04-19T12:11:35.457Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
