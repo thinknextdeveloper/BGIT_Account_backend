@@ -1,12 +1,12 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getAll = async () => {
   const pool = await getPool();
   const request = pool.request();
 
   const result = await request.query(`
     SELECT [CollegeName], [Batch], [Semester], [Facility], [ValidUpTo]
-    FROM [DBSmartCampusAsra].[dbo].[MasterHostelBusValidity]
+    FROM [${dbName}].[dbo].[MasterHostelBusValidity]
     ORDER BY [CollegeName], [Batch], [Semester]
   `);
 
@@ -19,7 +19,7 @@ const getFiltered = async (collegeName, batch, semester) => {
 
   let query = `
     SELECT [CollegeName], [Batch], [Semester], [Facility], [ValidUpTo]
-    FROM [DBSmartCampusAsra].[dbo].[MasterHostelBusValidity]
+    FROM [${dbName}].[dbo].[MasterHostelBusValidity]
     WHERE [CollegeName] = @CollegeName
   `;
   request.input("CollegeName", sql.VarChar(200), collegeName);
@@ -48,7 +48,7 @@ const existsInMasterCourse = async (collegeName, batch, semester) => {
 
   const result = await request.query(`
     SELECT TOP 1 1 AS found
-    FROM [DBSmartCampusAsra].[dbo].[MasterCourse]
+    FROM [${dbName}].[dbo].[MasterCourse]
     WHERE [CollegeName] = @CollegeName AND [Batch] = @Batch AND [Semester] = @Semester
   `);
 
@@ -65,7 +65,7 @@ const existsDuplicate = async (collegeName, batch, semester, facility) => {
 
   const result = await request.query(`
     SELECT TOP 1 1 AS found
-    FROM [DBSmartCampusAsra].[dbo].[MasterHostelBusValidity]
+    FROM [${dbName}].[dbo].[MasterHostelBusValidity]
     WHERE [CollegeName] = @CollegeName AND [Batch] = @Batch
       AND [Semester] = @Semester AND [Facility] = @Facility
   `);
@@ -83,7 +83,7 @@ const insertRow = async (row) => {
   request.input("ValidUpTo", sql.Date, row.validUpTo);
 
   await request.query(`
-    INSERT INTO [DBSmartCampusAsra].[dbo].[MasterHostelBusValidity]
+    INSERT INTO [${dbName}].[dbo].[MasterHostelBusValidity]
     ([CollegeName], [Batch], [Semester], [Facility], [ValidUpTo])
     VALUES (@CollegeName, @Batch, @Semester, @Facility, @ValidUpTo)
   `);
@@ -107,7 +107,7 @@ const updateRow = async (originalKey, newValues) => {
   request.input("ValidUpTo", sql.Date, newValues.validUpTo);
 
   await request.query(`
-    UPDATE [DBSmartCampusAsra].[dbo].[MasterHostelBusValidity]
+    UPDATE [${dbName}].[dbo].[MasterHostelBusValidity]
     SET [CollegeName] = @CollegeName,
         [Batch] = @Batch,
         [Semester] = @Semester,

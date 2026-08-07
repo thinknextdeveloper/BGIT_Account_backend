@@ -25,7 +25,7 @@ const getCoursesForCollege = async (collegeName) => {
     .request()
     .input("CollegeName", sql.NVarChar, collegeName)
     .query(`
-      SELECT DISTINCT Course FROM MasterCourse
+      SELECT DISTINCT Course FROM MasterCourses
       WHERE CollegeName = @CollegeName
       ORDER BY Course
     `);

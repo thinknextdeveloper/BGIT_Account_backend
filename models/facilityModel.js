@@ -3,7 +3,7 @@ const { sql, getPool } = require("../config/db");
 const getStudentByIdOrReg = async ({ idNo, registrationNo }) => {
   const pool = await getPool();
   const request = pool.request();
-
+ 
   let where = "";
   if (idNo) {
     request.input("IDNo", sql.BigInt, idNo);
@@ -14,19 +14,29 @@ const getStudentByIdOrReg = async ({ idNo, registrationNo }) => {
   } else {
     throw new Error("idNo or registrationNo is required.");
   }
-
+ 
   const result = await request.query(`
     SELECT
-      IDNo, StudentType, CollegeName, StudentName, FatherName,
-      Course, Batch, Class, Session, Sex, LateralEntry,
-      Scheme, Category, Quota,
-      Facility, HostelName, RoomType, RoomNo, BusRoute, Stopage,
-      PermanentAddress, RegistrationNo
+      IDNo, RegistrationNo, StudentType, CollegeName, StudentName, FatherName,
+      Course, Batch, Class, PermanentAddress, Sex, LateralEntry,
+      Facility, BusRoute, BusFee, Stopage, HostelName, RoomType, HostelCharges,
+      FeeCategory, Snap
     FROM Admissions
     ${where}
   `);
-
-  return result.recordset[0];
+ 
+  const row = result.recordset[0];
+  if (!row) return null;
+ 
+  // Snap comes back from mssql as a Buffer (image/varbinary column). JSON
+  // can't carry a Buffer usefully — it'd serialize as {type:"Buffer",
+  // data:[...]}, which a browser <img> can't use. Encode it as a base64
+  // data URL here so the frontend can drop it straight into src=.
+  const { Snap, ...rest } = row;
+  return {
+    ...rest,
+    Snap: Snap ? `data:image/jpeg;base64,${Buffer.from(Snap).toString("base64")}` : null,
+  };
 };
 
 const getHostelNames = async () => {

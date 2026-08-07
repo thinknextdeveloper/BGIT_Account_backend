@@ -29,7 +29,7 @@ const facilityRoutes = require("./routes/facilityRoutes");
 const concessionRoutes = require("./routes/concessionRoutes");
 const feeReportRoutes = require("./routes/feeReportRoutes");
 const hostelReportRoutes = require("./routes/hostelReportRoutes");
-
+const debitRoutes = require("./routes/debitRoutes");
 
 const app = express();
 
@@ -74,7 +74,7 @@ app.use("/api/dead-debits", deadDebitsRoutes);
 
 app.use("/api/cancel-restore", cancelRestoreRoutes);
 app.use("/api/cancelRestore", cancelRestoreRoutes);
-
+app.use("/api/debit", debitRoutes);
 app.use("/api/receipt-update", receiptUpdateRoutes);
 app.use("/api/facility", facilityRoutes);
 app.use("/api/concession", concessionRoutes);

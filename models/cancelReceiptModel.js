@@ -1,175 +1,13 @@
-// const { sql, getPool } = require("../config/db");
-
-// const getColleges = async () => {
-//   const pool = await getPool();
-//   const result = await pool.request().query(`
-//     SELECT DISTINCT CollegeName FROM MasterCollege ORDER BY CollegeName
-//   `);
-//   return result.recordset.map((r) => r.CollegeName);
-// };
-
-// const getLedgerNames = async () => {
-//   const pool = await getPool();
-//   const result = await pool.request().query(`
-//     SELECT DISTINCT LedgerName FROM Ledger WHERE LedgerName IS NOT NULL ORDER BY LedgerName
-//   `);
-//   return result.recordset.map((r) => r.LedgerName);
-// };
-
-// /**
-//  * Finds the Ledger receipt(s) matching College + Ledger Name + Session +
-//  * Receipt No, for the "Search" button's top grid. Excludes rows already
-//  * cancelled (ASSUMPTION: Ledger has an IsCancelled column — add it via
-//  * migration if it doesn't exist yet: ALTER TABLE Ledger ADD IsCancelled
-//  * NVARCHAR(3) DEFAULT 'No').
-//  */
-// const searchReceipt = async ({ collegeName, ledgerName, session, receiptNo }) => {
-//   const pool = await getPool();
-//   const request = pool.request();
-
-//   let query = `
-//     SELECT
-//       TransactionID, ReceiptNo, DateEntry, IDNo, StudentName, FatherName,
-//       Course, Batch, Semester, LedgerName, Credit, ModeOfPayment,
-//       CollegeName, Session, ISNULL(IsCancelled, 'No') AS IsCancelled
-//     FROM Ledger
-//     WHERE CollegeName = @CollegeName AND TransactionType = 'Credit'
-//   `;
-//   request.input("CollegeName", sql.NVarChar, collegeName);
-
-//   if (ledgerName) {
-//     query += ` AND LedgerName = @LedgerName`;
-//     request.input("LedgerName", sql.NVarChar, ledgerName);
-//   }
-//   if (session) {
-//     query += ` AND Session = @Session`;
-//     request.input("Session", sql.NVarChar, session);
-//   }
-//   if (receiptNo) {
-//     query += ` AND ReceiptNo = @ReceiptNo`;
-//     request.input("ReceiptNo", sql.Int, receiptNo);
-//   }
-
-//   query += ` ORDER BY DateEntry DESC`;
-
-//   const result = await request.query(query);
-//   return result.recordset;
-// };
-
-// /**
-//  * Marks a receipt as cancelled: inserts an audit row into CancelledReceipts
-//  * (ASSUMPTION: table doesn't exist yet — create it, see SQL below) and
-//  * flags the source Ledger row so it's excluded from future searches/day
-//  * book totals if you choose to filter on IsCancelled elsewhere.
-//  *
-//  * CREATE TABLE CancelledReceipts (
-//  *   Id INT IDENTITY PRIMARY KEY,
-//  *   TransactionID INT NOT NULL,
-//  *   ReceiptNo INT NOT NULL,
-//  *   CollegeName NVARCHAR(200) NOT NULL,
-//  *   LedgerName NVARCHAR(100) NULL,
-//  *   Session NVARCHAR(20) NULL,
-//  *   IDNo BIGINT NULL,
-//  *   StudentName NVARCHAR(200) NULL,
-//  *   Credit DECIMAL(18,2) NULL,
-//  *   Comments NVARCHAR(500) NOT NULL,
-//  *   CancelledDate DATETIME NOT NULL DEFAULT GETDATE(),
-//  *   CancelledBy NVARCHAR(100) NULL
-//  * );
-//  */
-// const addCancelledReceipt = async ({
-//   transactionId,
-//   receiptNo,
-//   collegeName,
-//   ledgerName,
-//   session,
-//   idNo,
-//   studentName,
-//   credit,
-//   comments,
-//   cancelledBy,
-// }) => {
-//   const pool = await getPool();
-//   const transaction = new sql.Transaction(pool);
-
-//   try {
-//     await transaction.begin();
-
-//     const insertRequest = transaction.request();
-//     insertRequest
-//       .input("TransactionID", sql.Int, transactionId)
-//       .input("ReceiptNo", sql.Int, receiptNo)
-//       .input("CollegeName", sql.NVarChar, collegeName)
-//       .input("LedgerName", sql.NVarChar, ledgerName || null)
-//       .input("Session", sql.NVarChar, session || null)
-//       .input("IDNo", sql.BigInt, idNo || null)
-//       .input("StudentName", sql.NVarChar, studentName || null)
-//       .input("Credit", sql.Decimal(18, 2), credit || null)
-//       .input("Comments", sql.NVarChar, comments)
-//       .input("CancelledBy", sql.NVarChar, cancelledBy || null);
-
-//     await insertRequest.query(`
-//       INSERT INTO CancelledReceipts
-//         (TransactionID, ReceiptNo, CollegeName, LedgerName, Session, IDNo, StudentName, Credit, Comments, CancelledBy)
-//       VALUES
-//         (@TransactionID, @ReceiptNo, @CollegeName, @LedgerName, @Session, @IDNo, @StudentName, @Credit, @Comments, @CancelledBy)
-//     `);
-
-//     const updateRequest = transaction.request();
-//     updateRequest.input("TransactionID", sql.Int, transactionId);
-//     await updateRequest.query(`
-//       UPDATE Ledger SET IsCancelled = 'Yes' WHERE TransactionID = @TransactionID
-//     `);
-
-//     await transaction.commit();
-//     return { success: true };
-//   } catch (err) {
-//     await transaction.rollback();
-//     throw err;
-//   }
-// };
-
-// /**
-//  * Lists cancelled receipts for a college within a date range — feeds the
-//  * bottom grid + Print button.
-//  */
-// const getCancelledReceipts = async ({ collegeName, dateFrom, dateTo }) => {
-//   const pool = await getPool();
-//   const request = pool.request();
-
-//   let query = `
-//     SELECT
-//       Id, TransactionID, ReceiptNo, CollegeName, LedgerName, Session,
-//       IDNo, StudentName, Credit, Comments, CancelledDate, CancelledBy
-//     FROM CancelledReceipts
-//     WHERE 1 = 1
-//   `;
-
-//   if (collegeName) {
-//     query += ` AND CollegeName = @CollegeName`;
-//     request.input("CollegeName", sql.NVarChar, collegeName);
-//   }
-//   if (dateFrom && dateTo) {
-//     query += ` AND CancelledDate BETWEEN @DateFrom AND @DateTo`;
-//     request.input("DateFrom", sql.DateTime, dateFrom);
-//     request.input("DateTo", sql.DateTime, dateTo);
-//   }
-
-//   query += ` ORDER BY CancelledDate DESC`;
-
-//   const result = await request.query(query);
-//   return result.recordset;
-// };
-
-// module.exports = {
-//   getColleges,
-//   getLedgerNames,
-//   searchReceipt,
-//   addCancelledReceipt,
-//   getCancelledReceipts,
-// };
-
 const { sql, getPool } = require("../config/db");
+
+// Coerces DB values into a valid JS Date or null — guards against empty
+// strings / invalid dates that break sql.DateTime serialization (the mssql
+// driver mangles these into "out-of-range" datetime conversion errors).
+const toDateOrNull = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 const getColleges = async () => {
   const pool = await getPool();
@@ -179,8 +17,10 @@ const getColleges = async () => {
   return result.recordset.map((r) => r.CollegeName);
 };
 
-// Mirrors VB ShowLedgerName(): distinct LedgerName from MasterLedgers,
-// scoped to the selected college.
+// Mirrors VB ShowLedgerName(): distinct LedgerName from MasterLedgers
+// (scoped to college) UNION ALL distinct HeadName from MasterHostelBusHeads
+// (not college-scoped) — VB fills both into datasets under the same table
+// name and calls ds.Merge(ds1), which just appends rows.
 const getLedgerNames = async (collegeName) => {
   const pool = await getPool();
   const result = await pool
@@ -189,6 +29,8 @@ const getLedgerNames = async (collegeName) => {
     .query(`
       SELECT DISTINCT LedgerName FROM MasterLedgers
       WHERE CollegeName = @CollegeName
+      UNION ALL
+      SELECT DISTINCT HeadName AS LedgerName FROM MasterHostelBusHeads
       ORDER BY LedgerName
     `);
   return result.recordset.map((r) => r.LedgerName);
@@ -218,8 +60,8 @@ const searchReceipt = async ({ collegeName, ledgerName, session, receiptNo }) =>
 /**
  * Mirrors VB btnAddCancelReceipt_Click:
  *  1. Re-fetch the Ledger row(s) matching the same 4-field criteria.
- *  2. Insert the first matching row into CancelledReceipt (now including
- *     Comments, which VB captured but never actually persisted).
+ *  2. Insert the first matching row into CancelledReceipt (including
+ *     Comments, and CancelReceiptDate = now).
  *  3. Fetch matching SubLedgers rows and insert each into
  *     CancelledReceiptHeads.
  *  4. Delete the matching rows from Ledger and SubLedgers.
@@ -266,7 +108,8 @@ const addCancelledReceipt = async ({
     const insertRequest = transaction.request();
     insertRequest
       .input("CollegeName", sql.NVarChar, row.CollegeName ?? null)
-      .input("DateEntry", sql.DateTime, row.DateEntry ?? null)
+      .input("DateEntry", sql.DateTime, toDateOrNull(row.DateEntry))
+      .input("CancelReceiptDate", sql.DateTime, new Date())
       .input("IDNo", sql.BigInt, row.IDNo ?? null)
       .input("StudentName", sql.NVarChar, row.StudentName ?? null)
       .input("FatherName", sql.NVarChar, row.FatherName ?? null)
@@ -276,7 +119,7 @@ const addCancelledReceipt = async ({
       .input("Credit", sql.Decimal(18, 2), row.Credit ?? null)
       .input("LedgerName", sql.NVarChar, row.LedgerName ?? null)
       .input("ModeOfPayment", sql.NVarChar, row.ModeOfPayment ?? null)
-      .input("ChequeDraftDate", sql.DateTime, row.ChequeDraftDate ?? null)
+      .input("ChequeDraftDate", sql.DateTime, toDateOrNull(row.ChequeDraftDate))
       .input("ChequeDraftNo", sql.NVarChar, row.ChequeDraftNo ?? null)
       .input("ChequeDraftBank", sql.NVarChar, row.ChequeDraftBank ?? null)
       .input("Session", sql.NVarChar, row.Session ?? null)
@@ -285,11 +128,11 @@ const addCancelledReceipt = async ({
 
     await insertRequest.query(`
       INSERT INTO CancelledReceipt
-        (CollegeName, DateEntry, IDNo, StudentName, FatherName, ReceiptNo,
+        (CollegeName, DateEntry, CancelReceiptDate, IDNo, StudentName, FatherName, ReceiptNo,
          Particulars, Debit, Credit, LedgerName, ModeOfPayment,
          ChequeDraftDate, ChequeDraftNo, ChequeDraftBank, Session, UserID, Comments)
       VALUES
-        (@CollegeName, @DateEntry, @IDNo, @StudentName, @FatherName, @ReceiptNo,
+        (@CollegeName, @DateEntry, @CancelReceiptDate, @IDNo, @StudentName, @FatherName, @ReceiptNo,
          @Particulars, @Debit, @Credit, @LedgerName, @ModeOfPayment,
          @ChequeDraftDate, @ChequeDraftNo, @ChequeDraftBank, @Session, @UserID, @Comments)
     `);

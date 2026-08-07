@@ -1,12 +1,12 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getAllCategories = async () => {
   const pool = await getPool();
   const request = pool.request();
 
   const result = await request.query(`
     SELECT [CollegeName], [Category]
-    FROM [DBSmartCampusAsra].[dbo].[MasterCategory]
+    FROM [${dbName}].[dbo].[MasterCategory]
     WHERE [CollegeName] IS NOT NULL
     ORDER BY [CollegeName], [Category]
   `);
@@ -21,7 +21,7 @@ const createCategory = async (collegeName, category) => {
   request.input("Category", sql.VarChar(100), category);
 
   await request.query(`
-    INSERT INTO [DBSmartCampusAsra].[dbo].[MasterCategory] ([CollegeName], [Category])
+    INSERT INTO [${dbName}].[dbo].[MasterCategory] ([CollegeName], [Category])
     VALUES (@CollegeName, @Category)
   `);
 

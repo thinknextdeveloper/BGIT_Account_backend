@@ -1,5 +1,5 @@
 const { sql } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getAllMenuItems = async () => {
   const result = await sql.query`
     SELECT
@@ -9,7 +9,7 @@ const getAllMenuItems = async () => {
       TEXT,
       [DESC],
       FUNC
-    FROM ITEMSNEW
+    FROM ITEMS
     ORDER BY HIERAR
   `;
 

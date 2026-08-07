@@ -1,5 +1,5 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const FUND_FIELDS = [
   "Laboratory",
   "Workshop",
@@ -24,7 +24,7 @@ const getFiltered = async (collegeName, course, batch, semester) => {
            [ITConnectivity], [CivilWorks], [FacultyImprovementProgram],
            [ImprovementLibraryFacilities], [EducationalTour],
            [DailyConsumableGoodsForPracticals], [Contingency], [Total]
-    FROM [DBSmartCampusAsra].[dbo].[MasterDevFund]
+    FROM [${dbName}].[dbo].[MasterDevFund]
     WHERE [CollegeName] = @CollegeName
   `;
 
@@ -55,7 +55,7 @@ const existsInMasterCourse = async (collegeName, course, batch, semester) => {
 
   const result = await request.query(`
     SELECT TOP 1 [SemesterID]
-    FROM [DBSmartCampusAsra].[dbo].[MasterCourse]
+    FROM [${dbName}].[dbo].[MasterCourse]
     WHERE [CollegeName] = @CollegeName AND [Course] = @Course
       AND [Batch] = @Batch AND [Semester] = @Semester
   `);
@@ -76,7 +76,7 @@ const existsDuplicate = async (session, collegeName, course, batch, semester, sc
 
   const result = await request.query(`
     SELECT TOP 1 1 AS found
-    FROM [DBSmartCampusAsra].[dbo].[MasterDevFund]
+    FROM [${dbName}].[dbo].[MasterDevFund]
     WHERE [Session] = @Session AND [CollegeName] = @CollegeName AND [Course] = @Course
       AND [Batch] = @Batch AND [Semester] = @Semester
       AND [Scheme] = @Scheme AND [Category] = @Category
@@ -109,7 +109,7 @@ const insertRow = async (row) => {
   request.input("Total", sql.Float, total);
 
   await request.query(`
-    INSERT INTO [DBSmartCampusAsra].[dbo].[MasterDevFund]
+    INSERT INTO [${dbName}].[dbo].[MasterDevFund]
     ([Session], [CollegeName], [Course], [Batch], [Semester], [SemesterID], [Scheme], [Category],
      [Laboratory], [Workshop], [ComputerAndPeripherals], [ITConnectivity], [CivilWorks],
      [FacultyImprovementProgram], [ImprovementLibraryFacilities], [EducationalTour],
@@ -152,7 +152,7 @@ const updateRow = async (originalKey, newValues) => {
   request.input("Total", sql.Float, total);
 
   await request.query(`
-    UPDATE [DBSmartCampusAsra].[dbo].[MasterDevFund]
+    UPDATE [${dbName}].[dbo].[MasterDevFund]
     SET [Session] = @Session, [CollegeName] = @CollegeName, [Course] = @Course,
         [Batch] = @Batch, [Semester] = @Semester, [SemesterID] = @SemesterID,
         [Scheme] = @Scheme, [Category] = @Category,

@@ -1,4 +1,20 @@
 const { sql, getPool } = require("../config/db");
+const getFeeHeadsByIdNo = async (idNo, session, ledgerName) => {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("IDNo", sql.VarChar, String(idNo))
+    .input("Session", sql.VarChar, String(session))
+    .input("LedgerName", sql.VarChar, String(ledgerName))
+    .query(`
+        SELECT *
+        FROM FeeHeads
+        WHERE TRY_CAST(IDNo AS BIGINT) = TRY_CAST(@IDNo AS BIGINT)
+          AND Session = @Session
+          AND LedgerName = @LedgerName
+    `);
+  return result.recordset;
+};
 
 const getStudentById = async (idNo) => {
   const pool = await getPool();
@@ -36,23 +52,25 @@ const getLedger = async (idNo) => {
 // NOT what the Fee grid should use anymore, use getFeeStructureWithBalances
 // instead. LedgerName on SubLedgers rows is always "Fee"/"Bus" here, so this
 // does not give per-head breakdown.
-const getFeeHeads = async (idNo) => {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("IDNo", sql.BigInt, idNo)
-    .query(`
-        SELECT sl.Subhead AS LedgerName,
-               SUM(sl.Credit) AS Credit,
-               SUM(sl.Debit)  AS Debit
-        FROM SubLedgers sl
-        INNER JOIN Ledger l
-          ON sl.TransactionID = l.TransactionID
-         AND sl.CollegeName   = l.CollegeName
-        WHERE l.IDNo = @IDNo
-        GROUP BY sl.Subhead
-    `);
-  return result.recordset;
+
+const getFeeHeads = async (req, res) => {
+  try {
+    const { idNo, session, ledgerName } = req.query;
+
+    if (!idNo || !session || !ledgerName) {
+      return res.status(400).json({
+        success: false,
+        message: "idNo, session, and ledgerName are required",
+      });
+    }
+
+    const feeHeads = await getFeeHeadsByIdNo(idNo, session, ledgerName);
+
+    return res.status(200).json({ success: true, feeHeads });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // Generates the next Fee receipt no. for a college/session,
@@ -152,6 +170,11 @@ const genTransactionId = async (collegeName, transaction) => {
  * plus one row per fee head in SubLedgers (so getFeeStructureWithBalances
  * can attribute amounts back to individual heads like Academic Fee / Bus
  * Fee / etc.). Mirrors VB's btnSave_Click.
+ *
+ * FIX: removed "DayBookDateEntry" — that column does not exist on the
+ * Ledger table (that's what caused: "Invalid column name
+ * 'DayBookDateEntry'" on Save and Print). DateEntry alone covers what the
+ * VB code wrote via @DateEntry.
  */
 const saveFeeEntry = async (payload) => {
   const pool = await getPool();
@@ -194,7 +217,6 @@ const saveFeeEntry = async (payload) => {
     ledgerRequest
       .input("CollegeName", sql.NVarChar, collegeName)
       .input("DateEntry", sql.DateTime, dateEntry)
-      .input("DayBookDateEntry", sql.DateTime, new Date())
       .input("IDNo", sql.BigInt, idNo)
       .input("StudentName", sql.NVarChar, studentName)
       .input("FatherName", sql.NVarChar, fatherName)
@@ -225,13 +247,13 @@ const saveFeeEntry = async (payload) => {
 
     await ledgerRequest.query(`
       INSERT INTO Ledger
-        (CollegeName, DateEntry, DayBookDateEntry, IDNo, StudentName, FatherName,
+        (CollegeName, DateEntry, IDNo, StudentName, FatherName,
          Course, Class, Batch, ClassRollNo, UniRollNo, Semester, Scheme, Category,
          ModeOfAdmission, Sex, Particulars, LedgerName, Credit, ReceiptNo,
          ReceiptType, TransactionType, OnAccountOf, ModeOfPayment,
          ChequeDraftDate, ChequeDraftNo, ChequeDraftBank, TransactionID, Session, UserID)
       VALUES
-        (@CollegeName, @DateEntry, @DayBookDateEntry, @IDNo, @StudentName, @FatherName,
+        (@CollegeName, @DateEntry, @IDNo, @StudentName, @FatherName,
          @Course, @Class, @Batch, @ClassRollNo, @UniRollNo, @Semester, @Scheme, @Category,
          @ModeOfAdmission, @Sex, @Particulars, @LedgerName, @Credit, @ReceiptNo,
          @ReceiptType, @TransactionType, @OnAccountOf, @ModeOfPayment,
@@ -427,15 +449,6 @@ const getFeeStructureWithBalances = async ({
 
   // 3. Merge — mirrors VB's dgvHeads columns: Head, Credit(=balance paid),
   //    Debit(=amount owed from config), Balance Head-Wise(=same balance)
-  // return heads.map((h) => {
-  //   const balance = balanceMap[h.Head] || 0;
-  //   return {
-  //     Head: h.Head,
-  //     Debit: h.Debit || 0, // amount owed, from MasterAnnualFee config
-  //     Credit: balance, // amount paid so far, from SubLedgers
-  //     BalanceHeadWise: balance,
-  //     Concession: 0, // wire up getconcessionAmount equivalent later if needed
-  //   };
   return heads.map((h) => {
     const balance = Number(balanceMap[h.Head]) || 0;
 

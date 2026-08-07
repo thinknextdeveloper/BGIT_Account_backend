@@ -1,5 +1,5 @@
 const feeSingleHeadService = require("../services/feeSingleHeadService");
-
+const { sql, getPool } = require("../config/db");
 const getAuthenticatedUsername = (req) => {
   return req.user?.username || req.user?.UserName || req.query.username;
 };

@@ -1,5 +1,5 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getLedgerNamesForCollege = async (collegeName) => {
   const pool = await getPool();
   const request = pool.request();
@@ -7,7 +7,7 @@ const getLedgerNamesForCollege = async (collegeName) => {
 
   const result = await request.query(`
     SELECT DISTINCT [LedgerName]
-    FROM [DBSmartCampusAsra].[dbo].[Ledger]
+    FROM [${dbName}].[dbo].[Ledger]
     WHERE [CollegeName] = @CollegeName
       AND [LedgerName] IS NOT NULL
     ORDER BY [LedgerName]

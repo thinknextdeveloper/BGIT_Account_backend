@@ -1,12 +1,12 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getSessions = async () => {
   const pool = await getPool();
   const request = pool.request();
 
   const result = await request.query(`
     SELECT DISTINCT [Session]
-    FROM [DBSmartCampusAsra].[dbo].[Ledger]
+    FROM [[${dbName}]
     WHERE [Session] IS NOT NULL
     ORDER BY [Session]
   `);
@@ -26,8 +26,8 @@ const getLedgerNamesForCollege = async (collegeName) => {
 
   const result = await request.query(`
     SELECT DISTINCT sl.[Subhead] AS LedgerName
-    FROM [DBSmartCampusAsra].[dbo].[SubLedgers] sl
-    INNER JOIN [DBSmartCampusAsra].[dbo].[Ledger] l
+    FROM [${dbName}].[SubLedgers] sl
+    INNER JOIN [${dbName}].[Ledger] l
       ON l.[TransactionID] = sl.[TransactionID]
      AND l.[CollegeName] = sl.[CollegeName]
     WHERE sl.[CollegeName] = @CollegeName
@@ -94,8 +94,8 @@ const getFeeReportSingleLedger = async (filters) => {
       l.[FatherName],
       sl.[Subhead] AS LedgerName,
       sl.[Credit] AS Amount
-    FROM [DBSmartCampusAsra].[dbo].[SubLedgers] sl
-    INNER JOIN [DBSmartCampusAsra].[dbo].[Ledger] l
+    FROM [${dbName}].[SubLedgers] sl
+    INNER JOIN [${dbName}].[Ledger] l
       ON l.[TransactionID] = sl.[TransactionID]
      AND l.[CollegeName] = sl.[CollegeName]
     ${where}
@@ -115,8 +115,8 @@ const getDistinctSubheadsForFilters = async (filters) => {
 
   const query = `
     SELECT DISTINCT sl.[Subhead]
-    FROM [DBSmartCampusAsra].[dbo].[SubLedgers] sl
-    INNER JOIN [DBSmartCampusAsra].[dbo].[Ledger] l
+    FROM [${dbName}].[dbo].[SubLedgers] sl
+    INNER JOIN [${dbName}].[dbo].[Ledger] l
       ON l.[TransactionID] = sl.[TransactionID]
      AND l.[CollegeName] = sl.[CollegeName]
      AND l.[LedgerName] = sl.[LedgerName]
@@ -165,8 +165,8 @@ const getFeeReportAllLedgers = async (filters) => {
       MAX(l.[FatherName]) AS FatherName,
       ${pivotColumns},
       SUM(sl.[Credit]) AS Total
-    FROM [DBSmartCampusAsra].[dbo].[SubLedgers] sl
-    INNER JOIN [DBSmartCampusAsra].[dbo].[Ledger] l
+    FROM [${dbName}].[dbo].[SubLedgers] sl
+    INNER JOIN [${dbName}].[dbo].[Ledger] l
       ON l.[TransactionID] = sl.[TransactionID]
      AND l.[CollegeName] = sl.[CollegeName]
     ${where}

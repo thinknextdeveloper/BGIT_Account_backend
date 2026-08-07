@@ -31,9 +31,15 @@ const getModesOfPayment = async () => {
 
 /**
  * Mirrors VB frmDayBook.Display(): pulls Credit-type Ledger rows within a
- * DayBookDateEntry range, optionally scoped by college / session /
- * ledger name / mode of payment. Returns rows + total credit, matching
+ * DateEntry range, optionally scoped by college / session / ledger name /
+ * mode of payment. Returns rows + total credit, matching
  * txtTotalAmount.Text / lblTotalRecords.Text in the VB form.
+ *
+ * FIX: the VB source filters on Ledger.DateEntry everywhere (see
+ * frmDayBook.Display, btnPrintDateWise_Click, btnLedgerwise_Click,
+ * btnPrintReceiptnowise_Click) — there is no DayBookDateEntry column on
+ * Ledger. Using that name caused:
+ *   "Invalid column name 'DayBookDateEntry'"
  */
 const getDayBookEntries = async (filters) => {
   const {
@@ -51,12 +57,12 @@ const getDayBookEntries = async (filters) => {
 
   let query = `
     SELECT
-      DayBookDateEntry, DateEntry, ReceiptNo, IDNo, UniRollNo, StudentName, FatherName,
+      DateEntry, ReceiptNo, IDNo, UniRollNo, StudentName, FatherName,
       Credit, ChequeDraftNo, ChequeDraftDate, ChequeDraftBank, LedgerName, Course,
       ModeOfPayment, CollegeName, Session
     FROM Ledger
     WHERE TransactionType = 'Credit'
-      AND DayBookDateEntry BETWEEN @DateFrom AND @DateTo
+      AND DateEntry BETWEEN @DateFrom AND @DateTo
   `;
 
   request.input("DateFrom", sql.DateTime, dateFrom);
@@ -108,7 +114,7 @@ const getCashVsBankTotals = async (collegeName, dateFrom, dateTo) => {
     SELECT ISNULL(SUM(Credit), 0) AS Total FROM Ledger
     WHERE CollegeName = @CollegeName AND ModeOfPayment = 'Cash'
       AND TransactionType = 'Credit'
-      AND DayBookDateEntry BETWEEN @DateFrom AND @DateTo
+      AND DateEntry BETWEEN @DateFrom AND @DateTo
   `);
 
   const bankRequest = pool.request();
@@ -120,7 +126,7 @@ const getCashVsBankTotals = async (collegeName, dateFrom, dateTo) => {
     SELECT ISNULL(SUM(Credit), 0) AS Total FROM Ledger
     WHERE CollegeName = @CollegeName AND ModeOfPayment <> 'Cash'
       AND TransactionType = 'Credit'
-      AND DayBookDateEntry BETWEEN @DateFrom AND @DateTo
+      AND DateEntry BETWEEN @DateFrom AND @DateTo
   `);
 
   return {
@@ -143,7 +149,7 @@ const getLedgerWiseSummary = async (collegeName, dateFrom, dateTo) => {
     SELECT LedgerName, SUM(Credit) AS Credit
     FROM Ledger
     WHERE CollegeName = @CollegeName AND TransactionType = 'Credit'
-      AND DayBookDateEntry BETWEEN @DateFrom AND @DateTo
+      AND DateEntry BETWEEN @DateFrom AND @DateTo
     GROUP BY LedgerName
     ORDER BY LedgerName
   `);

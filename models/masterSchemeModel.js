@@ -1,12 +1,12 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getAllSchemes = async () => {
   const pool = await getPool();
   const request = pool.request();
 
   const result = await request.query(`
     SELECT [CollegeName], [Scheme]
-    FROM [DBSmartCampusAsra].[dbo].[MasterScheme]
+    FROM [${dbName}].[dbo].[MasterScheme]
     WHERE [CollegeName] IS NOT NULL
     ORDER BY [CollegeName], [Scheme]
   `);
@@ -21,7 +21,7 @@ const createScheme = async (collegeName, scheme) => {
   request.input("Scheme", sql.VarChar(100), scheme);
 
   await request.query(`
-    INSERT INTO [DBSmartCampusAsra].[dbo].[MasterScheme] ([CollegeName], [Scheme])
+    INSERT INTO [${dbName}].[dbo].[MasterScheme] ([CollegeName], [Scheme])
     VALUES (@CollegeName, @Scheme)
   `);
 

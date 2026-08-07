@@ -1,5 +1,5 @@
 const { sql, getPool } = require("../config/db");
-
+const dbName = process.env.DB_DATABASE;
 const getFeeStructure = async (collegeName, course, batch, semester) => {
   const pool = await getPool();
   const request = pool.request();
@@ -20,7 +20,7 @@ const getFeeStructure = async (collegeName, course, batch, semester) => {
       [Scheme],
       [Head],
       [Amount]
-    FROM [DBSmartCampusAsra].[dbo].[MasterAnnualFee]
+    FROM [${dbName}].[dbo].[MasterAnnualFee]
     WHERE [CollegeName] = @CollegeName
       AND [Course] = @Course
       AND [Batch] = @Batch
@@ -45,7 +45,7 @@ const getFeeStructure = async (collegeName, course, batch, semester) => {
 //   request.input("Amount", sql.Float, row.amount);
 
 //   await request.query(`
-//     INSERT INTO [DBSmartCampusAsra].[dbo].[MasterAnnualFee]
+//     INSERT INTO [${dbName}].[dbo].[MasterAnnualFee]
 //     ([CollegeName], [Course], [Batch], [Semester], [Category], [ModeOfAdmission], [Scheme], [Head], [Amount])
 //     VALUES
 //     (@CollegeName, @Course, @Batch, @Semester, @Category, @ModeOfAdmission, @Scheme, @Head, @Amount)
@@ -67,7 +67,7 @@ const insertFeeRow = async (row) => {
   request.input("Amount", sql.Float, row.Amount);
 
   await request.query(`
-    INSERT INTO [DBSmartCampusAsra].[dbo].[MasterAnnualFee]
+    INSERT INTO [${dbName}].[dbo].[MasterAnnualFee]
     ([CollegeName], [Course], [Batch], [Semester], [Category], [ModeOfAdmission], [Scheme], [Head], [Amount])
     VALUES
     (@CollegeName, @Course, @Batch, @Semester, @Category, @ModeOfAdmission, @Scheme, @Head, @Amount)

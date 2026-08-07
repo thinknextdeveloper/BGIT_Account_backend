@@ -416,60 +416,64 @@ class FeeSingleHeadRepository {
   /**
    * Insert new entry into Ledger table matching AddDebitEntry() / Save Fee Entry VB logic
    */
-  async createLedgerEntry(entry) {
+/**
+   * Insert new entry into Ledger table matching AddDebitEntry() / Save Fee Entry VB logic
+   */
+  async createLedgerEntry(ledgerEntry) {
     const request = new sql.Request();
 
-    const ymdDateEntry = toYMDString(entry.DateEntry) || toYMDString(new Date());
-    const ymdDayBookDate = toYMDString(new Date());
-    const ymdChequeDate = entry.ChequeDraftDate ? toYMDString(entry.ChequeDraftDate) : null;
-
-    request.input("CollegeName", sql.VarChar(100), entry.CollegeName || null);
-    request.input("DateEntry", sql.VarChar(50), ymdDateEntry);
-    request.input("DayBookDateEntry", sql.VarChar(50), ymdDayBookDate);
-    request.input("IDNo", sql.VarChar(100), entry.IDNo !== undefined && entry.IDNo !== null ? String(entry.IDNo).trim() : null);
-    request.input("StudentName", sql.VarChar(100), entry.StudentName || null);
-    request.input("FatherName", sql.VarChar(100), entry.FatherName || null);
-    request.input("Course", sql.VarChar(100), entry.Course || null);
-    request.input("Class", sql.VarChar(100), entry.Class || null);
-    request.input("ClassRollNo", sql.VarChar(50), entry.ClassRollNo || null);
-    request.input("Batch", sql.VarChar(50), entry.Batch || null);
-    request.input("Semester", sql.VarChar(50), entry.Semester || null);
-    request.input("SemesterID", sql.Int, entry.SemesterID || 1);
-    request.input("Sex", sql.VarChar(20), entry.Sex || null);
-    request.input("Particulars", sql.VarChar(255), entry.Particulars || null);
-    request.input("LedgerName", sql.VarChar(100), entry.LedgerName || null);
-    request.input("Credit", sql.Decimal(18, 2), entry.Credit !== undefined && entry.Credit !== null ? Number(entry.Credit) : null);
-    request.input("Debit", sql.Decimal(18, 2), entry.Debit !== undefined && entry.Debit !== null ? Number(entry.Debit) : null);
-    request.input("TransactionType", sql.VarChar(50), entry.TransactionType || "Debit");
-    request.input("OnAccountOf", sql.VarChar(255), entry.OnAccountOf || null);
-    request.input("ModeOfPayment", sql.VarChar(50), entry.ModeOfPayment || null);
-    request.input("ChequeDraftDate", sql.VarChar(50), ymdChequeDate);
-    request.input("ChequeDraftNo", sql.VarChar(50), entry.ChequeDraftNo || null);
-    request.input("ChequeDraftBank", sql.VarChar(100), entry.ChequeDraftBank || null);
-    request.input("TransactionID", sql.VarChar(100), entry.TransactionID !== undefined && entry.TransactionID !== null ? String(entry.TransactionID).trim() : "1");
-    request.input("Session", sql.VarChar(50), entry.Session || null);
-    request.input("ReceiptNo", sql.VarChar(100), entry.ReceiptNo !== undefined && entry.ReceiptNo !== null ? String(entry.ReceiptNo).trim() : null);
-    request.input("ReceiptType", sql.VarChar(50), entry.ReceiptType || "Single");
+    request.input("CollegeName", sql.VarChar(200), ledgerEntry.CollegeName || null);
+    request.input("DateEntry", sql.Date, toDateWithoutTime(ledgerEntry.DateEntry));
+    request.input("IDNo", sql.VarChar(100), ledgerEntry.IDNo);
+    request.input("StudentName", sql.VarChar(200), ledgerEntry.StudentName || null);
+    request.input("FatherName", sql.VarChar(200), ledgerEntry.FatherName || null);
+    request.input("Course", sql.VarChar(100), ledgerEntry.Course || null);
+    request.input("Class", sql.VarChar(100), ledgerEntry.Class || null);
+    request.input("ClassRollNo", sql.VarChar(100), ledgerEntry.ClassRollNo || null);
+    request.input("UniRollNo", sql.VarChar(100), ledgerEntry.UniRollNo || null);
+    request.input("Batch", sql.VarChar(100), ledgerEntry.Batch || null);
+    request.input("Semester", sql.VarChar(100), ledgerEntry.Semester);
+    request.input("SemesterID", sql.Int, ledgerEntry.SemesterID);
+    request.input("FeeCategory", sql.VarChar(100), ledgerEntry.FeeCategory || null);
+    request.input("Sex", sql.VarChar(20), ledgerEntry.Sex || null);
+    request.input("Particulars", sql.VarChar(500), ledgerEntry.Particulars);
+    request.input("LedgerName", sql.VarChar(200), ledgerEntry.LedgerName);
+    request.input("Credit", sql.Decimal(18, 2), ledgerEntry.Credit);
+    request.input("Debit", sql.Decimal(18, 2), ledgerEntry.Debit);
+    request.input("ReceiptNo", sql.Int, ledgerEntry.ReceiptNo);
+    request.input("ReceiptType", sql.VarChar(50), ledgerEntry.ReceiptType);
+    request.input("TransactionType", sql.VarChar(50), ledgerEntry.TransactionType);
+    request.input("OnAccountOf", sql.VarChar(500), ledgerEntry.OnAccountOf);
+    request.input("ModeOfPayment", sql.VarChar(50), ledgerEntry.ModeOfPayment);
+    request.input("ChequeDraftDate", sql.Date, toDateWithoutTime(ledgerEntry.ChequeDraftDate));
+    request.input("ChequeDraftNo", sql.VarChar(100), ledgerEntry.ChequeDraftNo || null);
+    request.input("ChequeDraftBank", sql.VarChar(200), ledgerEntry.ChequeDraftBank || null);
+    request.input("TransactionID", sql.Int, ledgerEntry.TransactionID);
+    request.input("Session", sql.VarChar(50), ledgerEntry.Session);
 
     const query = `
-      INSERT INTO Ledger (
-        CollegeName, DateEntry, DayBookDateEntry, IDNo, StudentName, FatherName,
-        Course, Class, ClassRollNo, Batch, Semester, SemesterID, Sex,
-        Particulars, LedgerName, Credit, Debit, TransactionType,
-        OnAccountOf, ModeOfPayment, ChequeDraftDate, ChequeDraftNo, ChequeDraftBank,
-        TransactionID, Session, ReceiptNo, ReceiptType
-      ) VALUES (
-        @CollegeName, @DateEntry, @DayBookDateEntry, @IDNo, @StudentName, @FatherName,
-        @Course, @Class, @ClassRollNo, @Batch, @Semester, @SemesterID, @Sex,
-        @Particulars, @LedgerName, @Credit, @Debit, @TransactionType,
-        @OnAccountOf, @ModeOfPayment, @ChequeDraftDate, @ChequeDraftNo, @ChequeDraftBank,
-        @TransactionID, @Session, @ReceiptNo, @ReceiptType
-      );
+      INSERT INTO Ledger
+        (CollegeName, DateEntry, IDNo, StudentName, FatherName, Course, Class,
+         ClassRollNo, UniRollNo, Batch, Semester, SemesterID, FeeCategory, Sex,
+         Particulars, LedgerName, Credit, Debit, ReceiptNo, ReceiptType,
+         TransactionType, OnAccountOf, ModeOfPayment, ChequeDraftDate,
+         ChequeDraftNo, ChequeDraftBank, TransactionID, Session)
+      VALUES
+        (@CollegeName, @DateEntry, @IDNo, @StudentName, @FatherName, @Course, @Class,
+         @ClassRollNo, @UniRollNo, @Batch, @Semester, @SemesterID, @FeeCategory, @Sex,
+         @Particulars, @LedgerName, @Credit, @Debit, @ReceiptNo, @ReceiptType,
+         @TransactionType, @OnAccountOf, @ModeOfPayment, @ChequeDraftDate,
+         @ChequeDraftNo, @ChequeDraftBank, @TransactionID, @Session);
     `;
 
-    await request.query(query);
-    console.log("[FeeSingleHead Repository] Ledger entry inserted successfully with ReceiptType 'Single' for TxID:", entry.TransactionID);
-    return true;
+    try {
+      const result = await request.query(query);
+      console.log("[FeeSingleHead Repository] Ledger entry inserted, rowsAffected:", result.rowsAffected);
+      return result;
+    } catch (error) {
+      console.error("Error in createLedgerEntry query:", error.message);
+      throw error;
+    }
   }
 
   /**

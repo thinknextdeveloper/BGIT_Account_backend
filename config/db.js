@@ -1,124 +1,111 @@
-// const sql = require("mssql/msnodesqlv8");
-// require("dotenv").config();
-
-// // Active Connection Config using process.env
-// const dbServer = process.env.DB_SERVER || "112.196.105.162";
-// const dbDatabase = process.env.DB_DATABASE || "DBSmartCampusAsra";
-// const dbUser = process.env.DB_USER || "sa";
-// const dbPassword = process.env.DB_PASSWORD || "b2y3rt98159(*!%(";
-
-// const config = {
-//   // New Active Connection: Remote SQL Server 112.196.105.162
-//   connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${dbServer};Database=${dbDatabase};Uid=${dbUser};Pwd=${dbPassword};`,
-  
-//   // Old Local DB Connections (Commented out):
-//   // connectionString: "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-Q884IGA;Database=DBSmartCampusAsra;Trusted_Connection=Yes;",
-//   // connectionString: "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-UCBVR7F;Database=DBSmartCampusAsra;Trusted_Connection=Yes;",
-// };
-
-// let pool;
-
-// async function connectDB() {
-//   try {
-//     pool = await sql.connect(config);
-//     console.log(`✅ SQL Server Connected (${dbServer} -> ${dbDatabase})`);
-//     return pool;
-//   } catch (err) {
-//     console.error("Database Error:", err);
-//     throw err;
-//   }
-// }
-
-// async function getPool() {
-//   if (!pool || !pool.connected) {
-//     if (pool) {
-//       try {
-//         await pool.close();
-//       } catch (e) {}
-//     }
-//     await connectDB();
-//   }
-//   return pool;
-// }
-
-// module.exports = { sql, connectDB, getPool };
-
-const sql = require("mssql"); // NOT mssql/msnodesqlv8
+const sql = require("mssql/msnodesqlv8");
 require("dotenv").config();
-// Active Connection Config using process.env
-const dbServer = process.env.DB_SERVER || "112.196.105.162";
-const dbDatabase = process.env.DB_DATABASE || "DBSmartCampusAsra";
-const dbUser = process.env.DB_USER || "sa";
-const dbPassword = process.env.DB_PASSWORD || "b2y3rt98159(*!%(";
 
+// SQL Server Configuration
 const config = {
-  server: dbServer,
-  database: dbDatabase,
-  user: dbUser,
-  password: dbPassword,
-  port: 1433,
-  options: {
-    encrypt: false, // set true if your server requires TLS; try false first for a plain remote SQL Server
-    trustServerCertificate: true,
-  },
-  pool: {
-    max: 5,
-    min: 0,
-    idleTimeoutMillis: 15000, // close idle connections quickly - important for serverless
-  },
+  connectionString:
+    "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-UCBVR7F;Database=DBSmartCampusBGIET;Trusted_Connection=Yes;",
 };
 
-let pool;
+let pool = null;
 
+/**
+ * Connect to SQL Server
+ */
 async function connectDB() {
   try {
+    if (pool && pool.connected) {
+      return pool;
+    }
+
     pool = await sql.connect(config);
-    console.log(`✅ SQL Server Connected (${dbServer} -> ${dbDatabase})`);
+
+    console.log("✅ SQL Server Connected Successfully");
     return pool;
   } catch (err) {
-    console.error("Database Error:", err);
+    console.error("❌ Database Connection Error:", err.message);
     throw err;
   }
 }
 
+/**
+ * Get existing pool or reconnect
+ */
 async function getPool() {
-  if (!pool || !pool.connected) {
-    if (pool) {
-      try {
-        await pool.close();
-      } catch (e) {}
+  try {
+    if (!pool || !pool.connected) {
+      if (pool) {
+        try {
+          await pool.close();
+        } catch (e) {}
+      }
+
+      pool = await connectDB();
     }
-    await connectDB();
+
+    return pool;
+  } catch (err) {
+    throw err;
   }
-  return pool;
 }
 
 /**
- * Runs a query function against the pool, and if it fails specifically
- * because the pooled connection was silently closed (common in serverless,
- * where the function is frozen between invocations), forces a fresh
- * reconnect and retries once.
+ * Retry wrapper for database operations
  */
-async function withRetry(queryFn) {
-  let currentPool = await getPool();
+async function withRetry(callback, retries = 3) {
+  let lastError;
 
-  try {
-    return await queryFn(currentPool);
-  } catch (err) {
-    const isConnectionClosed =
-      err?.message === "Connection is closed." ||
-      err?.code === "ECONNCLOSED" ||
-      err?.code === "ENOTOPEN";
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const pool = await getPool();
+      return await callback(pool);
+    } catch (err) {
+      lastError = err;
 
-    if (!isConnectionClosed) {
-      throw err;
+      console.error(
+        `❌ Database operation failed (Attempt ${attempt}/${retries}):`,
+        err.message
+      );
+
+      // Close broken connection
+      if (pool) {
+        try {
+          await pool.close();
+        } catch (e) {}
+
+        pool = null;
+      }
+
+      // Wait before retrying
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
+  }
 
-    console.warn("Connection was closed - reconnecting and retrying once...");
-    pool = null;
-    currentPool = await getPool();
-    return await queryFn(currentPool);
+  throw lastError;
+}
+
+/**
+ * Close DB Connection
+ */
+async function closeDB() {
+  if (pool) {
+    try {
+      await pool.close();
+      pool = null;
+      console.log("🔒 SQL Server Connection Closed");
+    } catch (err) {
+      console.error("Error closing database:", err.message);
+    }
   }
 }
 
-module.exports = { sql, connectDB, getPool, withRetry };
+module.exports = {
+  sql,
+  config,
+  connectDB,
+  getPool,
+  withRetry,
+  closeDB,
+};
