@@ -1,5 +1,5 @@
 const { sql, getPool } = require("../config/db");
-const dbName = process.env.DB_DATABASE;
+const dbName = process.env.DB_DATABASE || "DBSmartCampusBGIET";
 const listSchemes = async (req, res) => {
   try {
     const pool = await getPool();

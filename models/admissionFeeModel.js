@@ -20,7 +20,7 @@ const getStudentById = async (idNo) => {
   const pool = await getPool();
   const result = await pool
     .request()
-    .input("IDNo", sql.BigInt, idNo)
+    .input("IDNo", sql.NVarChar, idNo ? String(idNo) : null)
     .query(`
         SELECT
             IDNo, StudentType, CollegeName, StudentName, FatherName,
@@ -38,7 +38,7 @@ const getLedger = async (idNo) => {
   const pool = await getPool();
   const result = await pool
     .request()
-    .input("IDNo", sql.BigInt, idNo)
+    .input("IDNo", sql.NVarChar, idNo ? String(idNo) : null)
     .query(`
         SELECT DateEntry, Particulars, LedgerName, Debit, Credit
         FROM Ledger
@@ -75,40 +75,29 @@ const getFeeHeads = async (req, res) => {
 
 // Generates the next Fee receipt no. for a college/session,
 // mirrors Module1.CalcReceiptNo in the VB code
-const calcReceiptNo = async (collegeName, ledgerName, session, transaction) => {
-  if (!session || String(session).trim() === "") {
+const calcReceiptNo = async (collegeName, ledgerName = "Fee", session, transaction) => {
+  if (!collegeName || !session) {
     return 1;
   }
   const sessionStr = String(session).trim();
 
-  const req1 = transaction
-    ? transaction.request()
-    : (await getPool()).request();
-  req1.input("Session", sql.NVarChar, sessionStr);
-  const res1 = await req1.query(`
-    SELECT DISTINCT ReceiptNo
-    FROM Ledger
-    WHERE CAST(Session AS VARCHAR(100)) = @Session
-    ORDER BY ReceiptNo DESC
-  `);
-
-  if (!res1.recordset || res1.recordset.length === 0) {
-    return 1;
-  }
-
   const req2 = transaction
     ? transaction.request()
     : (await getPool()).request();
+  req2.input("CollegeName", sql.NVarChar, collegeName);
   req2.input("Session", sql.NVarChar, sessionStr);
+  req2.input("LedgerName", sql.NVarChar, ledgerName);
   const res2 = await req2.query(`
     SELECT MAX(TRY_CAST(ReceiptNo AS INT)) AS MaxReceiptNo
     FROM Ledger
-    WHERE CAST(Session AS VARCHAR(100)) = @Session
+    WHERE CollegeName = @CollegeName
+      AND CAST(Session AS VARCHAR(100)) = @Session
+      AND LedgerName = @LedgerName
   `);
 
   let receiptNo = Number(res2.recordset[0]?.MaxReceiptNo);
   if (isNaN(receiptNo) || res2.recordset[0]?.MaxReceiptNo === null || res2.recordset[0]?.MaxReceiptNo === undefined) {
-    return 1;
+    receiptNo = 0;
   }
 
   let cancelledRows = [];
@@ -116,11 +105,13 @@ const calcReceiptNo = async (collegeName, ledgerName, session, transaction) => {
     const req3 = transaction
       ? transaction.request()
       : (await getPool()).request();
+    req3.input("CollegeName", sql.NVarChar, collegeName);
     req3.input("Session", sql.NVarChar, sessionStr);
     const res3 = await req3.query(`
       SELECT TRY_CAST(ReceiptNo AS INT) AS ReceiptNo
       FROM CancelledReceipt
-      WHERE CAST(Session AS VARCHAR(100)) = @Session
+      WHERE CollegeName = @CollegeName
+        AND CAST(Session AS VARCHAR(100)) = @Session
       ORDER BY ReceiptNo DESC
     `);
     cancelledRows = res3.recordset || [];
@@ -155,14 +146,14 @@ const genTransactionId = async (collegeName, transaction) => {
   const result = await request
     .input("CollegeName", sql.NVarChar, collegeName)
     .query(`
-        SELECT MAX(TransactionID) AS MaxTxnID
+        SELECT MAX(TRY_CAST(TransactionID AS BIGINT)) AS MaxTxnID
         FROM Ledger
         WHERE CollegeName=@CollegeName
     `);
 
   const raw = result.recordset[0]?.MaxTxnID;
   const max = raw !== null && raw !== undefined ? Number(raw) : 0;
-  return max + 1; // now guaranteed numeric addition
+  return max + 1;
 };
 
 /**
@@ -217,7 +208,7 @@ const saveFeeEntry = async (payload) => {
     ledgerRequest
       .input("CollegeName", sql.NVarChar, collegeName)
       .input("DateEntry", sql.DateTime, dateEntry)
-      .input("IDNo", sql.BigInt, idNo)
+      .input("IDNo", sql.NVarChar, idNo ? String(idNo) : null)
       .input("StudentName", sql.NVarChar, studentName)
       .input("FatherName", sql.NVarChar, fatherName)
       .input("Course", sql.NVarChar, course)
@@ -243,7 +234,7 @@ const saveFeeEntry = async (payload) => {
       .input("ChequeDraftBank", sql.NVarChar, modeOfPayment !== "Cash" ? chequeDraftBank : null)
       .input("TransactionID", sql.BigInt, transactionId)
       .input("Session", sql.NVarChar, session || null)
-      .input("UserID", sql.NVarChar, userId || null);
+      .input("UserID", sql.NVarChar, userId || "711177");
 
     await ledgerRequest.query(`
       INSERT INTO Ledger
@@ -272,7 +263,7 @@ const saveFeeEntry = async (payload) => {
         .input("ReceiptNo", sql.Int, receiptNo)
         .input("Subhead", sql.NVarChar, row.head)
         .input("Credit", sql.Decimal(18, 2), row.credit)
-        .input("UserID", sql.NVarChar, userId || null);
+        .input("UserID", sql.NVarChar, userId || "711177");
 
       await subRequest.query(`
         INSERT INTO SubLedgers
@@ -286,7 +277,9 @@ const saveFeeEntry = async (payload) => {
 
     return { receiptNo, transactionId };
   } catch (err) {
-    await transaction.rollback();
+    try {
+      await transaction.rollback();
+    } catch (e) {}
     throw err;
   }
 };
@@ -383,7 +376,7 @@ const getFeeStructureWithBalances = async ({
 }) => {
   const pool = await getPool();
 
-  // 1. Head list + amount owed (MasterHeads / MasterAnnualFee)
+  // 1. Head list + configured debit amount (MasterHeads / MasterAnnualFee)
   const headsResult = await pool
     .request()
     .input("CollegeName", sql.NVarChar, collegeName)
@@ -394,7 +387,7 @@ const getFeeStructureWithBalances = async ({
     .input("Category", sql.NVarChar, category)
     .input("ModeOfAdmission", sql.NVarChar, modeOfAdmission)
     .query(`
-      SELECT DISTINCT MasterHeads.Head, MasterAnnualFee.Amount AS Debit, MasterHeads.ID
+      SELECT DISTINCT MasterHeads.Head, ISNULL(MasterAnnualFee.Amount, 0) AS ConfigDebit, MasterHeads.ID
       FROM MasterHeads
       LEFT JOIN MasterAnnualFee
         ON MasterHeads.CollegeName = MasterAnnualFee.CollegeName
@@ -410,56 +403,77 @@ const getFeeStructureWithBalances = async ({
       ORDER BY MasterHeads.ID
     `);
 
-  const heads = headsResult.recordset;
-  if (heads.length === 0) return [];
+  const heads = headsResult.recordset || [];
 
-  // 2. Balance already paid per head (VB looped BalanceHeadAmount() per
-  //    row — we do it as a single GROUP BY instead)
-  const balanceResult = await pool
+  // 2. Query SubLedgers for this student (using NVarChar IDNo)
+  const subLedgerResult = await pool
     .request()
     .input("CollegeName", sql.NVarChar, collegeName)
-    .input("IDNo", sql.BigInt, idNo)
-    .input("Semester", sql.NVarChar, semester)
-    .input("Session", sql.NVarChar, session)
+    .input("IDNo", sql.NVarChar, idNo ? String(idNo) : null)
     .query(`
       SELECT SubLedgers.SubHead,
-             SUM(CASE WHEN SubLedgers.TransactionType = 'Credit' THEN SubLedgers.Credit ELSE 0 END) AS Credit1,
-             SUM(CASE WHEN SubLedgers.TransactionType = 'Debit'  THEN SubLedgers.Debit  ELSE 0 END) AS Debit1
+             SUM(CASE WHEN SubLedgers.TransactionType = 'Debit' THEN ISNULL(SubLedgers.Debit, 0) ELSE 0 END) AS TotalDebit,
+             SUM(CASE WHEN SubLedgers.TransactionType = 'Credit' THEN ISNULL(SubLedgers.Credit, 0) ELSE 0 END) AS TotalCredit
       FROM SubLedgers
-      LEFT OUTER JOIN Ledger
+      INNER JOIN Ledger
         ON Ledger.CollegeName = SubLedgers.CollegeName
        AND Ledger.TransactionID = SubLedgers.TransactionID
-       AND Ledger.LedgerName = SubLedgers.LedgerName
       WHERE SubLedgers.CollegeName = @CollegeName
         AND Ledger.IDNo = @IDNo
-        AND Ledger.Semester = @Semester
-        AND Ledger.LedgerName = 'Fee'
-        AND SubLedgers.Session = @Session
-        AND Ledger.ReceiptType = 'Multiple'
       GROUP BY SubLedgers.SubHead
     `);
 
-  const balanceMap = {};
-  for (const row of balanceResult.recordset) {
-    // mirrors VB: varamount = Credit1; if Debit1 exists, varamount = Debit1 - Credit1
-    const credit1 = row.Credit1 || 0;
-    const debit1 = row.Debit1 || 0;
-    balanceMap[row.SubHead] = debit1 > 0 ? debit1 - credit1 : credit1;
+  const subMap = {};
+  for (const row of subLedgerResult.recordset || []) {
+    subMap[row.SubHead] = {
+      totalDebit: Number(row.TotalDebit) || 0,
+      totalCredit: Number(row.TotalCredit) || 0,
+    };
   }
 
-  // 3. Merge — mirrors VB's dgvHeads columns: Head, Credit(=balance paid),
-  //    Debit(=amount owed from config), Balance Head-Wise(=same balance)
-  return heads.map((h) => {
-    const balance = Number(balanceMap[h.Head]) || 0;
+  // 3. Merge — matches VB's dgvHeads columns:
+  // Head | Credit (editable payment amount) | Debit (read-only total debit) | Balance Head-Wise | Concession
+  const resultList = [];
+  const processedHeads = new Set();
 
-    return {
-      Head: h.Head,
-      Debit: Number(h.Debit) || 0,
-      Credit: balance,
-      BalanceHeadWise: balance,
+  for (const h of heads) {
+    const headName = h.Head;
+    processedHeads.add(headName);
+
+    const sub = subMap[headName] || { totalDebit: 0, totalCredit: 0 };
+    const configDebit = Number(h.ConfigDebit) || 0;
+
+    const debitVal = sub.totalDebit > 0 ? sub.totalDebit : configDebit;
+    const paidVal = sub.totalCredit;
+    const balanceHeadWise = debitVal > 0 ? Math.max(0, debitVal - paidVal) : paidVal;
+
+    resultList.push({
+      Head: headName,
+      Debit: debitVal,
+      Credit: balanceHeadWise, // Default payment amount input to current balance
+      BalanceHeadWise: balanceHeadWise,
       Concession: 0,
-    };
-  });
+    });
+  }
+
+  for (const subHead of Object.keys(subMap)) {
+    if (!processedHeads.has(subHead)) {
+      const sub = subMap[subHead];
+      const debitVal = sub.totalDebit;
+      const paidVal = sub.totalCredit;
+      const balanceHeadWise = debitVal > 0 ? Math.max(0, debitVal - paidVal) : paidVal;
+
+      resultList.push({
+        Head: subHead,
+        Debit: debitVal,
+        Credit: balanceHeadWise,
+        BalanceHeadWise: balanceHeadWise,
+        Concession: 0,
+      });
+    }
+  }
+
+  return resultList;
 };
 
 const getCurrentMasterSession = async () => {

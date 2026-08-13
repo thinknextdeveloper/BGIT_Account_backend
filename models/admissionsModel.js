@@ -1,6 +1,6 @@
 
 const { sql, getPool } = require("../config/db");
-const dbName = process.env.DB_DATABASE;
+const dbName = process.env.DB_DATABASE || "DBSmartCampusBGIET";
 const DISPLAY_COLUMNS = [
   "CollegeName", "Course", "Batch", "Class", "LateralEntry", "AdmissionDate",
   "IDNo", "ClassRollNo", "StudentName", "FatherName", "MotherName", "Sex", "DOB",

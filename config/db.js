@@ -4,7 +4,7 @@ require("dotenv").config();
 // SQL Server Configuration
 const config = {
   connectionString:
-    "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-UCBVR7F;Database=DBSmartCampusBGIET;Trusted_Connection=Yes;",
+    "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-Q884IGA;Database=DBSmartCampusBGIET;Trusted_Connection=Yes;",
 };
 
 let pool = null;
@@ -37,7 +37,7 @@ async function getPool() {
       if (pool) {
         try {
           await pool.close();
-        } catch (e) {}
+        } catch (e) { }
       }
 
       pool = await connectDB();
@@ -71,7 +71,7 @@ async function withRetry(callback, retries = 3) {
       if (pool) {
         try {
           await pool.close();
-        } catch (e) {}
+        } catch (e) { }
 
         pool = null;
       }

@@ -8,6 +8,8 @@ const {
   getRoomTypes,
   getRoutes,
   getStopages,
+  getSessions,
+  getSemesters,
 } = require("../models/debitModel");
 
 const {
@@ -23,78 +25,130 @@ const { getPool, sql } = require("../config/db");
 
 const getFeeHeads = async (req, res) => {
   try {
-    const { idNo, semester, feeCategory } = req.query;
+    const { idNo, collegeName, course, batch, semester, feeCategory, ledgerName = "Fee" } = req.query;
 
-    if (!idNo || !semester || !feeCategory) {
-      return res.status(400).json({
-        success: false,
-        message: "idNo, semester, and feeCategory are required",
-      });
-    }
+    const cleanParam = (val) => {
+      if (!val || val === "undefined" || val === "null" || String(val).trim() === "") return undefined;
+      return String(val).trim();
+    };
+
+    const cleanIdNo = cleanParam(idNo);
+    const cleanSemester = cleanParam(semester);
+    const cleanFeeCategory = cleanParam(feeCategory);
+    let targetCollege = cleanParam(collegeName);
+    let targetCourse = cleanParam(course);
+    let targetBatch = cleanParam(batch);
 
     const pool = await getPool();
 
-    // 1. Look up the student to get CollegeName / Course / Batch
-    const studentResult = await pool
-      .request()
-      .input("IDNo", sql.BigInt, idNo)
-      .query(`
-        SELECT CollegeName, Course, Batch
-        FROM Admissions
-        WHERE IDNo = @IDNo
-      `);
+    if (cleanIdNo) {
+      const studentResult = await pool
+        .request()
+        .input("IDNo", sql.BigInt, cleanIdNo)
+        .query(`
+          SELECT CollegeName, Course, Batch, FeeCategory
+          FROM Admissions
+          WHERE IDNo = @IDNo
+        `);
 
-    const student = studentResult.recordset[0];
-    if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+      const student = studentResult.recordset[0];
+      if (student) {
+        targetCollege = targetCollege || cleanParam(student.CollegeName);
+        targetCourse = targetCourse || cleanParam(student.Course);
+        targetBatch = targetBatch || cleanParam(student.Batch);
+      }
     }
 
-    // 2. Resolve FeeCategory name -> FeeCategoryID (mirrors getcategoryid())
+    if (!targetCollege || !cleanFeeCategory) {
+      return res.status(400).json({
+        success: false,
+        message: "College and feeCategory are required",
+      });
+    }
+
+    // Resolve FeeCategory name -> FeeCategoryID (mirrors getcategoryid())
     const categoryResult = await pool
       .request()
-      .input("FeeCategory", sql.VarChar, feeCategory)
-      .input("CollegeName", sql.VarChar, student.CollegeName)
+      .input("FeeCategory", sql.VarChar, cleanFeeCategory)
+      .input("CollegeName", sql.VarChar, targetCollege)
       .query(`
         SELECT FeeCategoryID
         FROM MasterFeeCategory
         WHERE FeeCategory = @FeeCategory AND CollegeName = @CollegeName
       `);
 
-    const feeCategoryId = categoryResult.recordset[0]?.FeeCategoryID;
-    if (!feeCategoryId) {
-      return res.status(404).json({ success: false, message: "Fee category not found" });
+    let feeCategoryId = categoryResult.recordset[0]?.FeeCategoryID || cleanFeeCategory;
+
+    let headFilter = "";
+    if (ledgerName === "Bus") {
+      headFilter = "AND (MasterHeads.Head LIKE '%Bus%' OR MasterHeads.Head LIKE '%Transport%' OR MasterHeads.Head = 'Bus Fee')";
+    } else if (ledgerName === "Hostel") {
+      headFilter = "AND (MasterHeads.Head LIKE '%Hostel%' OR MasterHeads.Head = 'Hostel Fee')";
+    } else if (ledgerName === "Fine") {
+      headFilter = "AND (MasterHeads.Head LIKE '%Fine%' OR MasterHeads.Head LIKE '%Late%')";
+    } else if (ledgerName === "Fee") {
+      headFilter = "AND MasterHeads.Head <> 'Late Fee' AND MasterHeads.Head NOT LIKE '%Hostel%' AND MasterHeads.Head NOT LIKE '%Bus%' AND MasterHeads.Head NOT LIKE '%Transport%'";
+    }
+    const request = pool.request();
+    request.input("CollegeName", sql.VarChar, targetCollege);
+
+    let onConditions = ``;
+
+    if (targetBatch && !isNaN(Number(targetBatch))) {
+      onConditions += ` AND (MasterAnnualFee.Batch = @Batch OR CAST(MasterAnnualFee.Batch AS VARCHAR) = @BatchStr)`;
+      request.input("Batch", sql.Int, Number(targetBatch));
+      request.input("BatchStr", sql.VarChar, String(targetBatch));
+    } else if (targetBatch) {
+      onConditions += ` AND CAST(MasterAnnualFee.Batch AS VARCHAR) = @BatchStr`;
+      request.input("BatchStr", sql.VarChar, String(targetBatch));
     }
 
-    // 3. Pull Heads + Amounts (mirrors ShowDebits1)
-    const headsResult = await pool
-      .request()
-      .input("CollegeName", sql.VarChar, student.CollegeName)
-      .input("Course", sql.VarChar, student.Course)
-      .input("Batch", sql.VarChar, String(student.Batch))
-      .input("Semester", sql.VarChar, semester)
-      .input("FeeCategoryID", sql.VarChar, String(feeCategoryId))
-      .query(`
-        SELECT DISTINCT MasterHeads.Head, MasterAnnualFee.Amount AS Credit, MasterHeads.ID
-        FROM MasterHeads
-        LEFT JOIN MasterAnnualFee
-          ON MasterHeads.CollegeName = MasterAnnualFee.CollegeName
-          AND MasterHeads.Head = MasterAnnualFee.Head
-        WHERE MasterAnnualFee.CollegeName = @CollegeName
-          AND MasterAnnualFee.Batch = @Batch
-          AND MasterAnnualFee.Course = @Course
-          AND MasterAnnualFee.Semester = @Semester
-          AND MasterAnnualFee.FeeCategory = @FeeCategoryID
-          AND MasterHeads.CollegeName = @CollegeName
-          AND MasterHeads.Head <> 'Late Fee'
-        ORDER BY MasterHeads.ID
-      `);
+    if (targetCourse) {
+      onConditions += ` AND MasterAnnualFee.Course = @Course`;
+      request.input("Course", sql.VarChar, targetCourse);
+    }
 
-    const feeHeads = headsResult.recordset.map((row) => ({
-      head: row.Head,
-      credit: row.Credit || 0,
-    }));
+    if (cleanSemester) {
+      onConditions += ` AND MasterAnnualFee.Semester = @Semester`;
+      request.input("Semester", sql.VarChar, cleanSemester);
+    }
 
-    return res.status(200).json({ success: true, feeHeads });
+    if (feeCategoryId !== undefined && feeCategoryId !== null) {
+      if (!isNaN(Number(feeCategoryId))) {
+        onConditions += ` AND (MasterAnnualFee.FeeCategory = @FeeCategoryID OR CAST(MasterAnnualFee.FeeCategory AS VARCHAR) = @FeeCategoryStr)`;
+        request.input("FeeCategoryID", sql.Int, Number(feeCategoryId));
+        request.input("FeeCategoryStr", sql.VarChar, String(feeCategoryId));
+      } else {
+        onConditions += ` AND CAST(MasterAnnualFee.FeeCategory AS VARCHAR) = @FeeCategoryStr`;
+        request.input("FeeCategoryStr", sql.VarChar, String(feeCategoryId));
+      }
+    }
+
+    let query = `
+      SELECT DISTINCT MasterHeads.Head, MasterAnnualFee.Amount AS Credit, MasterHeads.ID
+      FROM MasterHeads
+      LEFT JOIN MasterAnnualFee
+        ON MasterHeads.CollegeName = MasterAnnualFee.CollegeName
+        AND MasterHeads.Head = MasterAnnualFee.Head
+        ${onConditions}
+      WHERE MasterHeads.CollegeName = @CollegeName
+      ${headFilter}
+      ORDER BY MasterHeads.ID
+    `;
+
+    const headsResult = await request.query(query);
+
+    let totalCredit = 0;
+    const feeHeads = headsResult.recordset.map((row) => {
+      const credit = row.Credit || 0;
+      totalCredit += Number(credit);
+      return {
+        head: row.Head,
+        credit: credit,
+      };
+    });
+
+    return res.status(200).json({ success: true, feeHeads, totalCredit });
   } catch (err) {
     console.log(err);
     return res.status(500).json({ success: false, message: err.message });
@@ -132,9 +186,6 @@ const saveDebit = async (req, res) => {
     const { idNo } = req.params;
     const body = req.body;
 
-    if (!idNo) {
-      return res.status(400).json({ success: false, message: "ID No. is required" });
-    }
     if (!body.ledgerName) {
       return res.status(400).json({ success: false, message: "Please select a Ledger" });
     }
@@ -143,6 +194,45 @@ const saveDebit = async (req, res) => {
     }
     if (!body.debit || Number(body.debit) <= 0) {
       return res.status(400).json({ success: false, message: "Invalid Debit Amount" });
+    }
+
+    if (body.debitFrom === "Course") {
+      const { collegeName, course, batch, courseStudentType } = body;
+      if (!collegeName || !course || !batch) {
+        return res.status(400).json({ success: false, message: "College, Course, and Batch are required for Course debit" });
+      }
+
+      const count = await saveCourseDebitEntries({
+        collegeName,
+        course,
+        batch,
+        courseStudentType,
+        session: body.session,
+        semester: body.semester,
+        semesterId: body.semesterId,
+        category: body.category,
+        modeOfAdmission: body.modeOfAdmission,
+        ledgerName: body.ledgerName,
+        othersLedgerName: body.othersLedgerName,
+        facilityAmount: body.facility?.amount || null,
+        refundEntry: body.refundEntry,
+        concessionEntry: body.concessionEntry,
+        particulars: body.particulars,
+        debit: body.debit,
+        remarks: body.remarks,
+        userId: req.user?.id || body.userId || null,
+        dateEntry: body.dateEntry || null,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Course Debit Entries saved successfully for ${count} students.`,
+        count,
+      });
+    }
+
+    if (!idNo) {
+      return res.status(400).json({ success: false, message: "ID No. is required" });
     }
 
     let student;
@@ -164,7 +254,43 @@ const saveDebit = async (req, res) => {
       await updateFacilityDetail(idNo, body.facility, null);
     }
 
-    const { receiptNo, transactionId } = await saveDebitEntry({
+    // const { transactionId } = await saveDebitEntry({
+    //   idNo,
+    //   collegeName: student.CollegeName,
+    //   studentName: student.StudentName,
+    //   fatherName: student.FatherName,
+    //   course: student.Course,
+    //   studentClass: student.Class,
+    //   batch: student.Batch,
+    //   classRollNo: student.ClassRollNo,
+    //   uniRollNo: student.UniRollNo,
+    //   session: body.session,
+    //   semester: body.semester,
+    //   semesterId: body.semesterId,
+    //   category: body.category,
+    //   modeOfAdmission: body.modeOfAdmission,
+    //   ledgerName: body.ledgerName,
+    //   othersLedgerName: body.othersLedgerName,
+    //   facilityAmount: body.facility?.amount || null,
+    //   refundEntry: body.refundEntry,
+    //   concessionEntry: body.concessionEntry,
+    //   particulars: body.particulars,
+    //   debit: body.debit,
+    //   remarks: body.remarks,
+    //   userId: req.user?.id || req.user?.userId || body.userId || "711177",
+    //   dateEntry: body.dateEntry || null,
+    //   feeHeads: body.feeHeads,
+    // });
+    const userId = req.user?.id || req.user?.userId || body.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User ID not found. Please login again."
+      });
+    }
+
+    const { transactionId } = await saveDebitEntry({
       idNo,
       collegeName: student.CollegeName,
       studentName: student.StudentName,
@@ -176,6 +302,7 @@ const saveDebit = async (req, res) => {
       uniRollNo: student.UniRollNo,
       session: body.session,
       semester: body.semester,
+      semesterId: body.semesterId,
       category: body.category,
       modeOfAdmission: body.modeOfAdmission,
       ledgerName: body.ledgerName,
@@ -186,14 +313,13 @@ const saveDebit = async (req, res) => {
       particulars: body.particulars,
       debit: body.debit,
       remarks: body.remarks,
-      userId: req.user?.id || body.userId || null,
-      dateEntry: body.dateEntry ? new Date(body.dateEntry) : new Date(),
+      userId,
+      dateEntry: body.dateEntry || null,
+      feeHeads: body.feeHeads,
     });
-
     return res.status(200).json({
       success: true,
       message: "Entry has been Saved Successfully",
-      receiptNo,
       transactionId,
     });
   } catch (err) {
@@ -210,19 +336,18 @@ const saveDebit = async (req, res) => {
 const getMetaOptions = async (req, res) => {
   try {
     const { collegeName, route } = req.query;
-    if (!collegeName) {
-      return res.status(400).json({ success: false, message: "collegeName is required" });
-    }
 
-    const [hostelNames, roomTypes, routes, stopages, categories, modesOfAdmission, currentSession] =
+    const [hostelNames, roomTypes, routes, stopages, categories, modesOfAdmission, currentSession, sessions, semesters] =
       await Promise.all([
-        getHostelNames(collegeName),
+        collegeName ? getHostelNames(collegeName) : Promise.resolve([]),
         getRoomTypes(),
-        getRoutes(collegeName),
+        collegeName ? getRoutes(collegeName) : Promise.resolve([]),
         route ? getStopages(route) : Promise.resolve([]),
-        getCategories(collegeName),
+        collegeName ? getCategories(collegeName) : Promise.resolve([]),
         getModesOfAdmission(),
         getCurrentMasterSession(),
+        getSessions(),
+        getSemesters(),
       ]);
 
     return res.status(200).json({
@@ -234,6 +359,8 @@ const getMetaOptions = async (req, res) => {
       categories,
       modesOfAdmission,
       currentSession,
+      sessions,
+      semesters,
     });
   } catch (err) {
     console.log(err);
@@ -247,5 +374,5 @@ module.exports = {
   saveDebit,
   getMetaOptions,
   getFeeHeads,
-  
+
 };

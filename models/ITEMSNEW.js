@@ -1,5 +1,5 @@
 const { sql } = require("../config/db");
-const dbName = process.env.DB_DATABASE;
+const dbName = process.env.DB_DATABASE || "DBSmartCampusBGIET";
 const getAllMenuItems = async () => {
   const result = await sql.query`
     SELECT

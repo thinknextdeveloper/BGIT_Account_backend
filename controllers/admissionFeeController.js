@@ -164,7 +164,7 @@ const saveFee = async (req, res) => {
       chequeDraftNo: body.chequeDraftNo || null,
       chequeDraftBank: body.chequeDraftBank || null,
       session: body.session || student.Session,
-      userId: req.user?.id || body.userId || null,
+      userId: req.user?.id || req.user?.userId || body.userId || "711177",
       dateEntry: parseDDMonYY(body.dateEntry),
       feeHeads: body.feeHeads || [],
     });

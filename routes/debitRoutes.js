@@ -11,6 +11,7 @@ const {
 
 router.get("/meta-options", getMetaOptions);
 router.get("/fee-heads", getFeeHeads);   // must come BEFORE "/:idNo"
+router.post("/course/save", saveDebit); // must come BEFORE "/:idNo/save"
 router.get("/:idNo", findStudent);
 router.post("/:idNo/save", saveDebit);
 
