@@ -26,7 +26,6 @@ const findStudent = async (req, res) => {
     const { semester: requestedSemester, session } = req.query;
 
     const student = await getStudentById(idNo);
-    console.log("student-----------------",student)
 
     if (!student) {
       return res.status(404).json({
@@ -37,8 +36,6 @@ const findStudent = async (req, res) => {
 
     const ledger = await getLedger(idNo);
 
-    // Resolve the semester to actually use: explicit query param wins,
-    // otherwise auto-lookup the current one for this college/course/batch.
     let resolvedSemester = requestedSemester || null;
     if (!resolvedSemester) {
       resolvedSemester = await getCurrentSemester(
@@ -47,25 +44,37 @@ const findStudent = async (req, res) => {
         student.Batch
       );
     }
-console.log("student semester", resolvedSemester)
+
     const currentMasterSession = await getCurrentMasterSession();
-    const targetSession =currentMasterSession;
+    const targetSession = session || student.Session || currentMasterSession;
     let receiptNo = 1;
     if (targetSession) {
       receiptNo = await calcReceiptNo(student.CollegeName, "Fee", targetSession);
     }
 
+    // student.Category holds what VB.NET calls FeeCategory (varFeeCat).
+    // getStudentById() must SELECT it as `FeeCategory AS Category` for
+    // this to ever be truthy — otherwise this branch fires on every call.
+    if (!student.Category) {
+      return res.status(200).json({
+        success: true,
+        student, ledger, feeHeads: [], receiptNo,
+        session: targetSession, semester: resolvedSemester,
+        warning: "Fee Category not assigned for this student. Please assign it first.",
+      });
+    }
+
     let feeHeads = [];
-    if (resolvedSemester && student.Scheme && student.Category && student.Quota) {
+    if (resolvedSemester) {
       feeHeads = await getFeeStructureWithBalances({
-    idNo,
-    collegeName: student.CollegeName,
-    course: student.Course,
-    batch: student.Batch,
-    semester: resolvedSemester,
-    category: student.Scheme, // this is the real FeeCategory value
-    session: targetSession,
-  });
+        idNo,
+        collegeName: student.CollegeName,
+        course: student.Course,
+        batch: student.Batch,
+        semester: resolvedSemester,
+        category: student.Category,
+        session: targetSession,
+      });
     }
 
     return res.status(200).json({
@@ -76,7 +85,10 @@ console.log("student semester", resolvedSemester)
       receiptNo,
       session: targetSession,
       currentSession: currentMasterSession || student.Session,
-      semester: resolvedSemester, // frontend uses this to pre-fill cmbSemester
+      semester: resolvedSemester,
+      warning: feeHeads.length === 0
+        ? `No fee structure found for this student's course/batch/semester/category. Check that MasterHeads and MasterAnnualFee are configured for ${student.CollegeName}.`
+        : null,
     });
   } catch (err) {
     console.log(err);

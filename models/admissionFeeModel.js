@@ -16,37 +16,9 @@ const getFeeHeadsByIdNo = async (idNo, session, ledgerName) => {
   return result.recordset;
 };
 
-const getStudentById = async (idNo) => {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("IDNo", sql.BigInt, idNo)
-    .query(`
-        SELECT
-            IDNo, StudentType, CollegeName, StudentName, FatherName,
-            Course, Batch, Class, Session, ClassRollNo, UniRollNo,
-            PermanentAddress, Sex, LateralEntry, Facility, BusRoute,
-            BusFee, Stopage, HostelName, RoomType, HostelCharges,
-            Scheme, Category, Quota, Snap
-        FROM Admissions
-        WHERE IDNo=@IDNo
-    `);
-  return result.recordset[0];
-};
 
-const getLedger = async (idNo) => {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("IDNo", sql.BigInt, idNo)
-    .query(`
-        SELECT DateEntry, Particulars, LedgerName, Debit, Credit
-        FROM Ledger
-        WHERE IDNo=@IDNo
-        ORDER BY DateEntry DESC
-    `);
-  return result.recordset;
-};
+
+
 
 // Legacy raw dump (kept for backwards compatibility / debugging) — this is
 // NOT what the Fee grid should use anymore, use getFeeStructureWithBalances
@@ -75,75 +47,7 @@ const getFeeHeads = async (req, res) => {
 
 // Generates the next Fee receipt no. for a college/session,
 // mirrors Module1.CalcReceiptNo in the VB code
-const calcReceiptNo = async (collegeName, ledgerName, session, transaction) => {
-  if (!session || String(session).trim() === "") {
-    return 1;
-  }
-  const sessionStr = String(session).trim();
 
-  const req1 = transaction
-    ? transaction.request()
-    : (await getPool()).request();
-  req1.input("Session", sql.NVarChar, sessionStr);
-  const res1 = await req1.query(`
-    SELECT DISTINCT ReceiptNo
-    FROM Ledger
-    WHERE CAST(Session AS VARCHAR(100)) = @Session
-    ORDER BY ReceiptNo DESC
-  `);
-
-  if (!res1.recordset || res1.recordset.length === 0) {
-    return 1;
-  }
-
-  const req2 = transaction
-    ? transaction.request()
-    : (await getPool()).request();
-  req2.input("Session", sql.NVarChar, sessionStr);
-  const res2 = await req2.query(`
-    SELECT MAX(TRY_CAST(ReceiptNo AS INT)) AS MaxReceiptNo
-    FROM Ledger
-    WHERE CAST(Session AS VARCHAR(100)) = @Session
-  `);
-
-  let receiptNo = Number(res2.recordset[0]?.MaxReceiptNo);
-  if (isNaN(receiptNo) || res2.recordset[0]?.MaxReceiptNo === null || res2.recordset[0]?.MaxReceiptNo === undefined) {
-    return 1;
-  }
-
-  let cancelledRows = [];
-  try {
-    const req3 = transaction
-      ? transaction.request()
-      : (await getPool()).request();
-    req3.input("Session", sql.NVarChar, sessionStr);
-    const res3 = await req3.query(`
-      SELECT TRY_CAST(ReceiptNo AS INT) AS ReceiptNo
-      FROM CancelledReceipt
-      WHERE CAST(Session AS VARCHAR(100)) = @Session
-      ORDER BY ReceiptNo DESC
-    `);
-    cancelledRows = res3.recordset || [];
-  } catch (cancelErr) {
-    console.warn("CancelledReceipt query warning:", cancelErr.message);
-  }
-
-  if (cancelledRows.length > 0) {
-    for (let i = 0; i < cancelledRows.length; i++) {
-      let maxCancelRctno = Number(cancelledRows[i]?.ReceiptNo);
-      if (!isNaN(maxCancelRctno) && (maxCancelRctno >= receiptNo)) {
-        maxCancelRctno = maxCancelRctno + 1;
-        receiptNo = maxCancelRctno;
-        return receiptNo;
-      }
-    }
-    receiptNo = receiptNo + 1;
-  } else {
-    receiptNo = receiptNo + 1;
-  }
-
-  return receiptNo;
-};
 
 // Generates a fresh TransactionID scoped to the college,
 // mirrors Module1.GenTransactionID
@@ -339,25 +243,7 @@ const updateStudentAdmissionMeta = async (idNo, { scheme, category, quota }) => 
  * Display() populates the student's college/course/batch fields, so the
  * person doesn't have to manually pick a semester on every Find.
  */
-const getCurrentSemester = async (collegeName, course, batch) => {
-  const pool = await getPool();
-  const request = pool.request();
 
-  let query = `
-    SELECT TOP 1 Semester FROM MasterCurrentSemester
-    WHERE CollegeName = @CollegeName AND Course = @Course
-  `;
-  request.input("CollegeName", sql.NVarChar, collegeName);
-  request.input("Course", sql.NVarChar, course);
-
-  if (batch) {
-    query += ` AND Batch = @Batch`;
-    request.input("Batch", sql.Int, batch);
-  }
-
-  const result = await request.query(query);
-  return result.recordset[0]?.Semester || null;
-};
 
 /**
  * Builds the Fee-grid rows the way VB's Display()/ShowDebits()/
@@ -463,6 +349,168 @@ const getCurrentSemester = async (collegeName, course, batch) => {
 // };
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//THIS IS NEW APIS 
+
+
+
+async function getStudentById(idNo) {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("IDNo", sql.BigInt, idNo)
+    .query(`
+      SELECT IDNo, StudentType, CollegeName, StudentName, FatherName, Course,
+             Batch, Class, Session, ClassRollNo, UniRollNo, PermanentAddress,
+             Sex, LateralEntry, Facility, BusRoute, BusFee, Stopage,
+             HostelName, RoomType, HostelCharges, Scheme,
+             FeeCategory AS Category,   -- <-- alias here, once
+             Quota, Snap
+      FROM Admissions
+      WHERE IDNo = @IDNo
+    `);
+
+  return result.recordset[0] || null;
+}
+
+const getLedger = async (idNo) => {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("IDNo", sql.BigInt, idNo)
+    .query(`
+        SELECT DateEntry, Particulars, LedgerName, Debit, Credit
+        FROM Ledger
+        WHERE IDNo=@IDNo
+        ORDER BY DateEntry DESC
+    `);
+  return result.recordset;
+};
+
+const getCurrentSemester = async (collegeName, course, batch) => {
+  const pool = await getPool();
+  const request = pool.request();
+
+  let query = `
+    SELECT TOP 1 Semester FROM MasterCurrentSemester
+    WHERE CollegeName = @CollegeName AND Course = @Course
+  `;
+  request.input("CollegeName", sql.NVarChar, collegeName);
+  request.input("Course", sql.NVarChar, course);
+
+  if (batch) {
+    query += ` AND Batch = @Batch`;
+    request.input("Batch", sql.Int, batch);
+  }
+
+  const result = await request.query(query);
+  return result.recordset[0]?.Semester || null;
+};
+const getCurrentMasterSession = async () => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT TOP 1 CurrentSession 
+      FROM MasterSession 
+      ORDER BY Session DESC
+    `);
+    return result.recordset[0]?.CurrentSession || "";
+  } catch (err) {
+    console.warn("Error fetching MasterSession:", err.message);
+    return "";
+  }
+};
+const calcReceiptNo = async (collegeName, ledgerName, session, transaction) => {
+  if (!session || String(session).trim() === "") {
+    return 1;
+  }
+  const sessionStr = String(session).trim();
+
+  const req1 = transaction
+    ? transaction.request()
+    : (await getPool()).request();
+  req1.input("Session", sql.NVarChar, sessionStr);
+  const res1 = await req1.query(`
+    SELECT DISTINCT ReceiptNo
+    FROM Ledger
+    WHERE CAST(Session AS VARCHAR(100)) = @Session
+    ORDER BY ReceiptNo DESC
+  `);
+
+  if (!res1.recordset || res1.recordset.length === 0) {
+    return 1;
+  }
+
+  const req2 = transaction
+    ? transaction.request()
+    : (await getPool()).request();
+  req2.input("Session", sql.NVarChar, sessionStr);
+  const res2 = await req2.query(`
+    SELECT MAX(TRY_CAST(ReceiptNo AS INT)) AS MaxReceiptNo
+    FROM Ledger
+    WHERE CAST(Session AS VARCHAR(100)) = @Session
+  `);
+
+  let receiptNo = Number(res2.recordset[0]?.MaxReceiptNo);
+  if (isNaN(receiptNo) || res2.recordset[0]?.MaxReceiptNo === null || res2.recordset[0]?.MaxReceiptNo === undefined) {
+    return 1;
+  }
+
+  let cancelledRows = [];
+  try {
+    const req3 = transaction
+      ? transaction.request()
+      : (await getPool()).request();
+    req3.input("Session", sql.NVarChar, sessionStr);
+    const res3 = await req3.query(`
+      SELECT TRY_CAST(ReceiptNo AS INT) AS ReceiptNo
+      FROM CancelledReceipt
+      WHERE CAST(Session AS VARCHAR(100)) = @Session
+      ORDER BY ReceiptNo DESC
+    `);
+    cancelledRows = res3.recordset || [];
+  } catch (cancelErr) {
+    console.warn("CancelledReceipt query warning:", cancelErr.message);
+  }
+
+  if (cancelledRows.length > 0) {
+    for (let i = 0; i < cancelledRows.length; i++) {
+      let maxCancelRctno = Number(cancelledRows[i]?.ReceiptNo);
+      if (!isNaN(maxCancelRctno) && (maxCancelRctno >= receiptNo)) {
+        maxCancelRctno = maxCancelRctno + 1;
+        receiptNo = maxCancelRctno;
+        return receiptNo;
+      }
+    }
+    receiptNo = receiptNo + 1;
+    console.log("1111", receiptNo)
+  } else {
+    receiptNo = receiptNo + 1;
+    console.log("2222", receiptNo)
+  }
+
+  return receiptNo;
+};
+
+
 const getFeeStructureWithBalances = async ({
   idNo,
   collegeName,
@@ -513,6 +561,7 @@ const getFeeStructureWithBalances = async ({
     WHERE MasterHeads.CollegeName = @CollegeName
     ORDER BY MasterHeads.ID
   `);
+
   const heads = headsResult.recordset;
   if (heads.length === 0) return [];
 
@@ -560,20 +609,6 @@ const getFeeStructureWithBalances = async ({
 };
 
 
-const getCurrentMasterSession = async () => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT TOP 1 CurrentSession 
-      FROM MasterSession 
-      ORDER BY Session DESC
-    `);
-    return result.recordset[0]?.CurrentSession || "";
-  } catch (err) {
-    console.warn("Error fetching MasterSession:", err.message);
-    return "";
-  }
-};
 
 module.exports = {
   getStudentById,
