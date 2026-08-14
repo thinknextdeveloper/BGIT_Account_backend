@@ -26,6 +26,7 @@ const findStudent = async (req, res) => {
     const { semester: requestedSemester, session } = req.query;
 
     const student = await getStudentById(idNo);
+    console.log("student-----------------",student)
 
     if (!student) {
       return res.status(404).json({
@@ -46,9 +47,9 @@ const findStudent = async (req, res) => {
         student.Batch
       );
     }
-
+console.log("student semester", resolvedSemester)
     const currentMasterSession = await getCurrentMasterSession();
-    const targetSession = session || student.Session || currentMasterSession;
+    const targetSession =currentMasterSession;
     let receiptNo = 1;
     if (targetSession) {
       receiptNo = await calcReceiptNo(student.CollegeName, "Fee", targetSession);
@@ -57,16 +58,14 @@ const findStudent = async (req, res) => {
     let feeHeads = [];
     if (resolvedSemester && student.Scheme && student.Category && student.Quota) {
       feeHeads = await getFeeStructureWithBalances({
-        idNo,
-        collegeName: student.CollegeName,
-        course: student.Course,
-        batch: student.Batch,
-        semester: resolvedSemester,
-        scheme: student.Scheme,
-        category: student.Category,
-        modeOfAdmission: student.Quota,
-        session: targetSession,
-      });
+    idNo,
+    collegeName: student.CollegeName,
+    course: student.Course,
+    batch: student.Batch,
+    semester: resolvedSemester,
+    category: student.Scheme, // this is the real FeeCategory value
+    session: targetSession,
+  });
     }
 
     return res.status(200).json({
