@@ -1,55 +1,77 @@
-const { sql, getPool } = require("../config/db");
-const dbName = process.env.DB_DATABASE;
-const getLedgerNamesForCollege = async (collegeName) => {
-  const pool = await getPool();
-  const request = pool.request();
-  request.input("CollegeName", sql.VarChar(200), collegeName);
+const { sql, withRetry } = require("../config/db");
 
-  const result = await request.query(`
-    SELECT DISTINCT [LedgerName]
-    FROM [${dbName}].[dbo].[Ledger]
-    WHERE [CollegeName] = @CollegeName
-      AND [LedgerName] IS NOT NULL
-    ORDER BY [LedgerName]
-  `);
+async function getLedgerNamesForCollege(collegeName) {
+  return withRetry(async (pool) => {
+    const result = await pool.request()
+      .input("collegeName", sql.VarChar, collegeName)
+      .query(`SELECT DISTINCT LedgerName FROM MasterLedgers WHERE CollegeName = @collegeName`);
+    const names = result.recordset.map((r) => r.LedgerName);
+    names.push("B/S"); // matches VB's cmbLedgerName.Items.Add("B/S")
+    return names;
+  });
+}
 
-  return result.recordset.map((r) => r.LedgerName);
-};
+async function getBatchesForCollege(collegeName) {
+  return withRetry(async (pool) => {
+    const result = await pool.request()
+      .input("collegeName", sql.VarChar, collegeName)
+      .query(`SELECT DISTINCT Batch FROM MasterCourses WHERE CollegeName = @collegeName ORDER BY Batch ASC`);
+    return result.recordset.map((r) => r.Batch);
+  });
+}
 
-const getConcessionReport = async (collegeName, ledgerName) => {
-  const pool = await getPool();
-  const request = pool.request();
-  request.input("CollegeName", sql.VarChar(200), collegeName);
+async function getCollegeAddress(collegeName) {
+  return withRetry(async (pool) => {
+    // Adjust table/columns to whatever frmdebit.GetAddressLine1/2 actually reads from
+    const result = await pool.request()
+      .input("collegeName", sql.VarChar, collegeName)
+      .query(`SELECT AddressLine1, AddressLine2 FROM Colleges WHERE CollegeName = @collegeName`);
+    const row = result.recordset[0];
+    return { addressLine1: row?.AddressLine1 ?? "", addressLine2: row?.AddressLine2 ?? "" };
+  });
+}
 
-  let query = `
-    SELECT
-      RegistrationNo,
-      IDNo,
-      UniRollNo,
-      StudentName,
-      Class,
-      LedgerName,
-      SUM(Debit) AS ConcessionGiven
-    FROM Ledger
-    WHERE CollegeName = @CollegeName
-      AND ConcessionEntry = 'Yes'
-  `;
+async function getConcessionReport(collegeName, ledgerName, batch, session) {
+  return withRetry(async (pool) => {
+    const request = pool.request().input("collegeName", sql.VarChar, collegeName);
 
-  if (ledgerName) {
-    query += ` AND LedgerName = @LedgerName`;
-    request.input("LedgerName", sql.VarChar(100), ledgerName);
-  }
+    let where = `WHERE CollegeName = @collegeName AND ConcessionEntry = 'Yes'`;
 
-  query += `
-    GROUP BY IDNo, RegistrationNo, UniRollNo, StudentName, Class, LedgerName
-    ORDER BY IDNo
-  `;
+    if (ledgerName) {
+      if (ledgerName === "B/S") {
+        where += ` AND BrotherSis = 'Yes'`;
+      } else {
+        request.input("ledgerName", sql.VarChar, ledgerName);
+        where += ` AND LedgerName = @ledgerName`;
+      }
+    }
+    if (batch) {
+      request.input("batch", sql.VarChar, batch);
+      where += ` AND Batch = @batch`;
+    }
+    if (session) {
+      request.input("session", sql.VarChar, session);
+      where += ` AND Session = @session`;
+    }
 
-  const result = await request.query(query);
-  return result.recordset;
-};
+    const query = `
+      SELECT RegistrationNo, IDNo, UniRollNo, StudentName, Class, LedgerName,
+             SUM(Debit) AS ConcessionGiven, Particulars
+      FROM Ledger
+      ${where}
+      GROUP BY IDNo, RegistrationNo, UniRollNo, StudentName, Class, LedgerName, Particulars
+    `;
 
-module.exports = {
-  getLedgerNamesForCollege,
-  getConcessionReport,
-};
+    const result = await request.query(query);
+    const rows = result.recordset.map((r) => ({
+      ...r,
+      ConcessionGiven: r.ConcessionGiven ?? 0, // mirrors VB's IsDBNull -> 0 check
+    }));
+
+    const totalConcessionAmount = rows.reduce((sum, r) => sum + Number(r.ConcessionGiven), 0);
+
+    return { rows, totalConcessionAmount, totalStudents: rows.length };
+  });
+}
+
+module.exports = { getLedgerNamesForCollege, getBatchesForCollege, getCollegeAddress, getConcessionReport };
