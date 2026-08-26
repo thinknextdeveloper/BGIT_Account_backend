@@ -195,7 +195,7 @@ const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Something went wrong. Please try again.",
-      error: error.stack, // Optional: remove this in production
+      error: error.stack, 
     });
   }
 };

@@ -1,4 +1,4 @@
-const { getFeeStructure, insertFeeRow } = require("../models/masterAnnualFeeModel");
+const { getFeeStructure, insertFeeRow, getMasterAnnualFeeReport } = require("../models/masterAnnualFeeModel");
 
 const displayFeeStructure = async (req, res) => {
   try {
@@ -84,7 +84,26 @@ const saveFeeStructure = async (req, res) => {
     });
   }
 };
+
+// ---- Added for the "all records" grid view (frmMasterAnnualFeeReport) ----
+const report = async (req, res) => {
+  try {
+    const rows = await getMasterAnnualFeeReport();
+    return res.status(200).json({
+      success: true,
+      data: { rows, totalRecords: rows.length },
+    });
+  } catch (error) {
+    console.error("Master annual fee report error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong. Please try again.",
+    });
+  }
+};
+
 module.exports = {
   displayFeeStructure,
   saveFeeStructure,
+  report,
 };

@@ -1,103 +1,73 @@
-const studentActivityFundService = require("../services/studentActivityFundService");
+const model = require("../models/studentActivityFundModel");
 
-const getAuthenticatedUsername = (req) => {
-  return req.user?.username || req.user?.UserName || req.query.username;
+const courses = async (req, res) => {
+  try {
+    const { collegeName } = req.query;
+    if (!collegeName) return res.status(400).json({ success: false, message: "collegeName is required." });
+    const data = await model.getCourses(collegeName);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
-const getStudentActivityFunds = async (req, res) => {
+const semesters = async (req, res) => {
   try {
-    const username = getAuthenticatedUsername(req);
-    if (!username) {
-      return res.status(401).json({
-        success: false,
-        message: "User authentication required.",
-      });
+    const { collegeName } = req.query;
+    if (!collegeName) return res.status(400).json({ success: false, message: "collegeName is required." });
+    const data = await model.getSemesters(collegeName);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const batches = async (req, res) => {
+  try {
+    const { collegeName } = req.query;
+    if (!collegeName) return res.status(400).json({ success: false, message: "collegeName is required." });
+    const data = await model.getBatches(collegeName);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const currentSession = async (req, res) => {
+  try {
+    const data = await model.getCurrentSession();
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const report = async (req, res) => {
+  try {
+    const { collegeName, course, batch, semester, dateFrom, dateTo } = req.query;
+    if (!collegeName) {
+      return res.status(400).json({ success: false, message: "Please Specify College" });
     }
 
-    const { session, collegeName, course, batch, semester } = req.query;
-    const result = await studentActivityFundService.getStudentActivityFunds(username, {
-      session,
-      collegeName,
-      course,
-      batch,
-      semester,
+    const data = await model.getStudentActivityFundReport({
+      collegeName, course, batch, semester,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     });
 
-    return res.status(200).json({
-      success: true,
-      message: "Student activity fund records retrieved successfully.",
-      data: result.records,
-      totalRecords: result.totalRecords,
-    });
-  } catch (error) {
-    console.error("Error in getStudentActivityFunds controller:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch student activity fund records.",
-    });
-  }
-};
-
-const createStudentActivityFund = async (req, res) => {
-  try {
-    const username = getAuthenticatedUsername(req);
-    if (!username) {
-      return res.status(401).json({
-        success: false,
-        message: "User authentication required.",
-      });
+    if (data.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "No record found!" });
     }
 
-    await studentActivityFundService.createStudentActivityFund(username, req.body);
-
-    return res.status(201).json({
-      success: true,
-      message: "Student activity fund record added successfully!",
-    });
-  } catch (error) {
-    console.error("Error in createStudentActivityFund controller:", error);
-    return res.status(400).json({
-      success: false,
-      message: error.message || "Failed to add student activity fund record.",
-    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-const getSchemes = async (req, res) => {
-  try {
-    const username = getAuthenticatedUsername(req);
-    const schemes = await studentActivityFundService.getSchemes(username);
-    return res.status(200).json({
-      success: true,
-      data: schemes,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch schemes.",
-    });
-  }
-};
-
-const getCategories = async (req, res) => {
-  try {
-    const username = getAuthenticatedUsername(req);
-    const categories = await studentActivityFundService.getCategories(username);
-    return res.status(200).json({
-      success: true,
-      data: categories,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch categories.",
-    });
-  }
-};
-
-module.exports = {
-  getStudentActivityFunds,
-  createStudentActivityFund,
-  getSchemes,
-  getCategories,
-};
+module.exports = { courses, semesters, batches, currentSession, report };

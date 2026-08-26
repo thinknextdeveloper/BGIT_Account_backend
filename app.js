@@ -9,7 +9,6 @@ const menuRoutes = require("./routes/menuRoutes");
 const semesterRoutes = require("./routes/semesterRoutes");
 const schemeRoutes = require("./routes/schemeRoutes");
 const ledgerRoutes = require("./routes/ledgerRoutes");
-const studentActivityFundRoutes = require("./routes/studentActivityFundRoutes");
 const masterCourseRoutes = require("./routes/masterCourseRoutes");
 const masterAnnualFeeRoutes = require("./routes/masterAnnualFeeRoutes");
 const masterCategoryRoutes = require("./routes/masterCategoryRoutes");
@@ -35,7 +34,12 @@ const routeStopageRoutes = require("./routes/routeStopage");
 const routeWiseReportRoutes = require("./routes/routeWiseReport");
 const receiptSearchRoutes = require("./routes/receiptSearchRoutes");
 const searchByAddressRoutes = require("./routes/searchByAddressRoutes");
-
+const studentActivityFundRoutes = require("./routes/studentActivityFundRoutes");
+const pendingRegistrationFeeRoutes = require("./routes/pendingRegistrationFee");
+const allSubLedgersPendingFeeRoutes = require("./routes/allSubLedgersPendingFee");
+const hostelFacilityReportRoutes = require("./routes/hostelFacilityReport");
+const duplicateHostelBusPassRoutes = require("./routes/duplicateHostelBusPass");
+const dayBookAllSubLedgersRoutes = require("./routes/dayBookAllSubLedgers");
 const app = express();
 
 // Middleware
@@ -58,7 +62,7 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/semester", semesterRoutes);
 app.use("/api/scheme", schemeRoutes);
 app.use("/api/ledger", ledgerRoutes);
-app.use("/api/student-activity-fund", studentActivityFundRoutes);
+
 app.use("/api/student-basic-details", studentBasicDetailsRoutes);
 
 app.use("/api/fee-single-head", feeSingleHeadRoutes);
@@ -90,6 +94,12 @@ app.use("/api/route-stopage", routeStopageRoutes);
 app.use("/api/route-wise-report", routeWiseReportRoutes);
 app.use("/api/receipt-search", receiptSearchRoutes);
 app.use("/api/search-by-address", searchByAddressRoutes);
+app.use("/api/student-activity-fund", studentActivityFundRoutes);
+app.use("/api/pending-registration-fee", pendingRegistrationFeeRoutes);
+app.use("/api/all-sub-ledgers-pending-fee", allSubLedgersPendingFeeRoutes);
+app.use("/api/hostel-facility-report", hostelFacilityReportRoutes);
+app.use("/api/duplicate-hostel-bus-pass", duplicateHostelBusPassRoutes);
+app.use("/api/daybook-all-sub-ledgers", dayBookAllSubLedgersRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

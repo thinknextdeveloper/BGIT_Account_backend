@@ -1,5 +1,6 @@
 const { sql, getPool } = require("../config/db");
 const dbName = process.env.DB_DATABASE;
+
 const getFeeStructure = async (collegeName, course, batch, semester) => {
   const pool = await getPool();
   const request = pool.request();
@@ -74,7 +75,35 @@ const insertFeeRow = async (row) => {
   `);
 };
 
+// ---- Added for the "all records" grid view (frmMasterAnnualFeeReport) ----
+// This is the unfiltered, all-colleges report the VB form loads on open —
+// separate from getFeeStructure above, which is a filtered single-combo lookup.
+const getMasterAnnualFeeReport = async () => {
+  const pool = await getPool();
+  const request = pool.request();
+
+  // NOTE: VB scopes this to frmdebit.GetAssignedCollegeName1() (privileged college list).
+  // Unrestricted here until that function's logic/table is shared.
+  const result = await request.query(`
+    SELECT
+      [CollegeName],
+      [Course],
+      [Batch],
+      [Semester],
+      [Head],
+      [Amount],
+      [Category],
+      [ModeOfAdmission],
+      [Scheme]
+    FROM [${dbName}].[dbo].[MasterAnnualFee]
+    ORDER BY [CollegeName], [Course], [Batch], [Semester]
+  `);
+
+  return result.recordset;
+};
+
 module.exports = {
   getFeeStructure,
   insertFeeRow,
+  getMasterAnnualFeeReport,
 };

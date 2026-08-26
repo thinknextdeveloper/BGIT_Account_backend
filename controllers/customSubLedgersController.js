@@ -1,84 +1,108 @@
 const {
-  getColleges,
-  getHeads,
-  getCourses,
-  getBatches,
-  getSemesters,
+  getCoursesByCollege,
+  getBatchesByCollege,
+  getSemestersByCollege,
+  getSubHeadsByCollege,
+  getSessions,
   getCustomSubLedgerReport,
 } = require("../models/customSubLedgersModel");
 
-const getCollegesList = async (req, res) => {
+// Some API clients stringify JS `undefined`/`null` into the literal text
+// "undefined"/"null" when building a query string, instead of omitting the
+// param. Treat those (and empty strings) as "not provided" so an optional
+// filter can never silently zero out every row.
+function cleanParam(value) {
+  if (value === undefined || value === null) return undefined;
+  if (value === "undefined" || value === "null" || value === "") return undefined;
+  return value;
+}
+
+
+const courses = async (req, res) => {
   try {
-    const colleges = await getColleges();
-    return res.status(200).json({ success: true, colleges });
+    const { college } = req.query;
+    if (!college) return res.status(400).json({ success: false, message: "Please Specify College" });
+    return res.status(200).json({ success: true, data: await getCoursesByCollege(college) });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-const getCollegeDependentOptions = async (req, res) => {
+const batches = async (req, res) => {
   try {
-    const { collegeName } = req.query;
-    if (!collegeName) {
-      return res.status(400).json({ success: false, message: "collegeName is required" });
+    const { college } = req.query;
+    if (!college) return res.status(400).json({ success: false, message: "Please Specify College" });
+    return res.status(200).json({ success: true, data: await getBatchesByCollege(college) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const semesters = async (req, res) => {
+  try {
+    const { college } = req.query;
+    if (!college) return res.status(400).json({ success: false, message: "Please Specify College" });
+    return res.status(200).json({ success: true, data: await getSemestersByCollege(college) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const subHeads = async (req, res) => {
+  try {
+    const { college } = req.query;
+    if (!college) return res.status(400).json({ success: false, message: "Please Specify College" });
+    return res.status(200).json({ success: true, data: await getSubHeadsByCollege(college) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const sessions = async (req, res) => {
+  try {
+    return res.status(200).json({ success: true, data: await getSessions() });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const report = async (req, res) => {
+  try {
+    const { college, course, batch, semester, session, dateFrom, dateTo, subHeads: subHeadsCsv } = req.query;
+
+    // Same validation as btnDisplay_Click: College is required, and at
+    // least one sub-ledger head must be selected.
+    if (!college) return res.status(400).json({ success: false, message: "Please Specify College" });
+    const subHeadList = subHeadsCsv ? subHeadsCsv.split(",").filter(Boolean) : [];
+    if (subHeadList.length === 0) {
+      return res.status(400).json({ success: false, message: "Please specify Sub Ledger" });
     }
 
-    const [heads, courses, batches, semesters] = await Promise.all([
-      getHeads(collegeName),
-      getCourses(collegeName),
-      getBatches(collegeName),
-      getSemesters(collegeName),
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      heads,
-      courses,
-      batches,
-      semesters,
+    const data = await getCustomSubLedgerReport({
+      collegeName: college,
+      course: cleanParam(course),
+      batch: cleanParam(batch),
+      semester: cleanParam(semester),
+      session: cleanParam(session),
+      dateFrom: cleanParam(dateFrom),
+      dateTo: cleanParam(dateTo),
+      subHeads: subHeadList,
     });
-  } catch (err) {
-    console.log(err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
 
-const getReport = async (req, res) => {
-  try {
-    const {
-      collegeName,
-      dateFrom,
-      dateTo,
-      course,
-      batch,
-      semester,
-      session,
-      heads,
-    } = req.query;
-
-    if (!collegeName) {
-      return res.status(400).json({ success: false, message: "Please Specify College" });
+    if (data.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "No record found!" });
     }
 
-    const headsArray = heads ? String(heads).split(",").filter(Boolean) : [];
-
-    const result = await getCustomSubLedgerReport({
-      collegeName,
-      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-      dateTo: dateTo ? new Date(dateTo) : undefined,
-      course: course || undefined,
-      batch: batch || undefined,
-      semester: semester || undefined,
-      session: session || undefined,
-      heads: headsArray,
-    });
-
-    return res.status(200).json({ success: true, ...result });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-module.exports = { getCollegesList, getCollegeDependentOptions, getReport };
+module.exports = { courses, batches, semesters, subHeads, sessions, report };

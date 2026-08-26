@@ -20,11 +20,6 @@ const getFeeHeadsByIdNo = async (idNo, session, ledgerName) => {
 
 
 
-// Legacy raw dump (kept for backwards compatibility / debugging) — this is
-// NOT what the Fee grid should use anymore, use getFeeStructureWithBalances
-// instead. LedgerName on SubLedgers rows is always "Fee"/"Bus" here, so this
-// does not give per-head breakdown.
-
 const getFeeHeads = async (req, res) => {
   try {
     const { idNo, session, ledgerName } = req.query;
@@ -45,12 +40,7 @@ const getFeeHeads = async (req, res) => {
   }
 };
 
-// Generates the next Fee receipt no. for a college/session,
-// mirrors Module1.CalcReceiptNo in the VB code
 
-
-// Generates a fresh TransactionID scoped to the college,
-// mirrors Module1.GenTransactionID
 const genTransactionId = async (collegeName, transaction) => {
   const request = transaction
     ? transaction.request()
@@ -66,20 +56,9 @@ const genTransactionId = async (collegeName, transaction) => {
 
   const raw = result.recordset[0]?.MaxTxnID;
   const max = raw !== null && raw !== undefined ? Number(raw) : 0;
-  return max + 1; // now guaranteed numeric addition
+  return max + 1; 
 };
 
-/**
- * Saves a fee entry: one row in Ledger (the overall receipt/credit line)
- * plus one row per fee head in SubLedgers (so getFeeStructureWithBalances
- * can attribute amounts back to individual heads like Academic Fee / Bus
- * Fee / etc.). Mirrors VB's btnSave_Click.
- *
- * FIX: removed "DayBookDateEntry" — that column does not exist on the
- * Ledger table (that's what caused: "Invalid column name
- * 'DayBookDateEntry'" on Save and Print). DateEntry alone covers what the
- * VB code wrote via @DateEntry.
- */
 const saveFeeEntry = async (payload) => {
   const pool = await getPool();
   const transaction = new sql.Transaction(pool);
@@ -104,14 +83,14 @@ const saveFeeEntry = async (payload) => {
       sex,
       onAccountOf,
       totalCredit,
-      modeOfPayment, // "Cash" | "Cheque" | "Draft" | "Bank Transfer"
+      modeOfPayment, 
       chequeDraftDate,
       chequeDraftNo,
       chequeDraftBank,
       session,
       userId,
-      dateEntry, // JS Date or ISO string
-      feeHeads, // [{ head: "Academic Fee", credit: 30100 }, ...] — only rows with credit > 0
+      dateEntry, 
+      feeHeads, 
     } = payload;
 
     const receiptNo = await calcReceiptNo(collegeName, "Fee", session, transaction);
@@ -236,139 +215,6 @@ const updateStudentAdmissionMeta = async (idNo, { scheme, category, quota }) => 
     `);
 };
 
-/**
- * Mirrors VB Module1.ShowCurSemester(): looks up the currently active
- * semester for a College + Course (+ Batch, if provided) from
- * MasterCurrentSemester. Used to auto-populate cmbSemester right after
- * Display() populates the student's college/course/batch fields, so the
- * person doesn't have to manually pick a semester on every Find.
- */
-
-
-/**
- * Builds the Fee-grid rows the way VB's Display()/ShowDebits()/
- * BalanceHeadAmount() pipeline does:
- *   1. Get the configured head list + amount owed from MasterHeads /
- *      MasterAnnualFee, scoped by course/batch/semester/scheme/category/
- *      modeOfAdmission.
- *   2. Get how much has already been paid per head from SubLedgers,
- *      scoped by student/semester/session.
- *   3. Merge the two so the frontend gets {Head, Debit, Credit,
- *      BalanceHeadWise, Concession} per row — exactly what dgvHeads showed.
- */
-// const getFeeStructureWithBalances = async ({
-//   idNo,
-//   collegeName,
-//   course,
-//   batch,
-//   semester,
-//   scheme,
-//   category,
-//   modeOfAdmission,
-//   session,
-// }) => {
-//   const pool = await getPool();
-
-//   // 1. Head list + amount owed (MasterHeads / MasterAnnualFee)
-//   const headsResult = await pool
-//     .request()
-//     .input("CollegeName", sql.NVarChar, collegeName)
-//     .input("Course", sql.NVarChar, course)
-//     .input("Batch", sql.Int, batch)
-//     .input("Semester", sql.NVarChar, semester)
-//     .input("Scheme", sql.NVarChar, scheme)
-//     .input("Category", sql.NVarChar, category)
-//     .input("ModeOfAdmission", sql.NVarChar, modeOfAdmission)
-//     .query(`
-//       SELECT DISTINCT MasterHeads.Head, MasterAnnualFee.Amount AS Debit, MasterHeads.ID
-//       FROM MasterHeads
-//       LEFT JOIN MasterAnnualFee
-//         ON MasterHeads.CollegeName = MasterAnnualFee.CollegeName
-//        AND MasterHeads.Head = MasterAnnualFee.Head
-//        AND MasterAnnualFee.CollegeName = @CollegeName
-//        AND MasterAnnualFee.Course = @Course
-//        AND MasterAnnualFee.Batch = @Batch
-//        AND MasterAnnualFee.Semester = @Semester
-//        AND MasterAnnualFee.Scheme = @Scheme
-//        AND MasterAnnualFee.Category = @Category
-//        AND MasterAnnualFee.ModeOfAdmission = @ModeOfAdmission
-//       WHERE MasterHeads.CollegeName = @CollegeName
-//       ORDER BY MasterHeads.ID
-//     `);
-
-//   const heads = headsResult.recordset;
-//   if (heads.length === 0) return [];
-
-//   // 2. Balance already paid per head (VB looped BalanceHeadAmount() per
-//   //    row — we do it as a single GROUP BY instead)
-//   const balanceResult = await pool
-//     .request()
-//     .input("CollegeName", sql.NVarChar, collegeName)
-//     .input("IDNo", sql.BigInt, idNo)
-//     .input("Semester", sql.NVarChar, semester)
-//     .input("Session", sql.NVarChar, session)
-//     .query(`
-//       SELECT SubLedgers.SubHead,
-//              SUM(CASE WHEN SubLedgers.TransactionType = 'Credit' THEN SubLedgers.Credit ELSE 0 END) AS Credit1,
-//              SUM(CASE WHEN SubLedgers.TransactionType = 'Debit'  THEN SubLedgers.Debit  ELSE 0 END) AS Debit1
-//       FROM SubLedgers
-//       LEFT OUTER JOIN Ledger
-//         ON Ledger.CollegeName = SubLedgers.CollegeName
-//        AND Ledger.TransactionID = SubLedgers.TransactionID
-//        AND Ledger.LedgerName = SubLedgers.LedgerName
-//       WHERE SubLedgers.CollegeName = @CollegeName
-//         AND Ledger.IDNo = @IDNo
-//         AND Ledger.Semester = @Semester
-//         AND Ledger.LedgerName = 'Fee'
-//         AND SubLedgers.Session = @Session
-//         AND Ledger.ReceiptType = 'Multiple'
-//       GROUP BY SubLedgers.SubHead
-//     `);
-
-//   const balanceMap = {};
-//   for (const row of balanceResult.recordset) {
-//     // mirrors VB: varamount = Credit1; if Debit1 exists, varamount = Debit1 - Credit1
-//     const credit1 = row.Credit1 || 0;
-//     const debit1 = row.Debit1 || 0;
-//     balanceMap[row.SubHead] = debit1 > 0 ? debit1 - credit1 : credit1;
-//   }
-
-//   // 3. Merge — mirrors VB's dgvHeads columns: Head, Credit(=balance paid),
-//   //    Debit(=amount owed from config), Balance Head-Wise(=same balance)
-//   return heads.map((h) => {
-//     const balance = Number(balanceMap[h.Head]) || 0;
-
-//     return {
-//       Head: h.Head,
-//       Debit: Number(h.Debit) || 0,
-//       Credit: balance,
-//       BalanceHeadWise: balance,
-//       Concession: 0,
-//     };
-//   });
-// };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//THIS IS NEW APIS 
 
 
 
@@ -517,7 +363,7 @@ const getFeeStructureWithBalances = async ({
   course,
   batch,
   semester,
-  category, // varFeeCat / student.Category -> MasterAnnualFee.FeeCategory
+  category,
   session,
 }) => {
   const pool = await getPool();
@@ -534,7 +380,7 @@ const getFeeStructureWithBalances = async ({
     return result.recordset[0]?.FeeCategoryID ?? null;
   }
   const feeCategoryId = await getCategoryId(pool, category, collegeName);
-  if (feeCategoryId === null) return []; // mirrors VB: category not resolvable -> no fee structure
+  if (feeCategoryId === null) return []; 
 
   const headsResult = await pool
     .request()
@@ -542,7 +388,7 @@ const getFeeStructureWithBalances = async ({
     .input("Course", sql.NVarChar, course)
     .input("Batch", sql.Int, batch)
     .input("Semester", sql.NVarChar, semester)
-    .input("FeeCategoryID", sql.Int, feeCategoryId)   // <-- ID, not text
+    .input("FeeCategoryID", sql.Int, feeCategoryId)
     .query(`
     SELECT DISTINCT
            MasterHeads.Head,

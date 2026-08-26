@@ -1,197 +1,154 @@
 const { sql, getPool } = require("../config/db");
 
-const getColleges = async () => {
-  const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT DISTINCT CollegeName FROM MasterCollege ORDER BY CollegeName
-  `);
-  return result.recordset.map((r) => r.CollegeName);
-};
-
-// Mirrors VB cmbcollege_SelectedIndexChanged: distinct Head from MasterHeads,
-// ordered by ID — these become the CheckedListBox1 items.
-const getHeads = async (collegeName) => {
+async function getCoursesByCollege(collegeName) {
   const pool = await getPool();
   const result = await pool
     .request()
-    .input("CollegeName", sql.NVarChar, collegeName)
-    .query(`
-      SELECT DISTINCT Head, ID FROM Masterheads
-      WHERE CollegeName = @CollegeName
-      ORDER BY ID
-    `);
-  return result.recordset.map((r) => r.Head);
-};
-
-const getCourses = async (collegeName) => {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("CollegeName", sql.NVarChar, collegeName)
-    .query(`SELECT DISTINCT Course FROM Ledger WHERE CollegeName = @CollegeName ORDER BY Course`);
+    .input("college", sql.VarChar, collegeName)
+    .query(`SELECT DISTINCT Course FROM Ledger WHERE CollegeName = @college`);
   return result.recordset.map((r) => r.Course);
-};
+}
 
-const getBatches = async (collegeName) => {
+async function getBatchesByCollege(collegeName) {
   const pool = await getPool();
   const result = await pool
     .request()
-    .input("CollegeName", sql.NVarChar, collegeName)
-    .query(`SELECT DISTINCT Batch FROM Ledger WHERE CollegeName = @CollegeName ORDER BY Batch`);
+    .input("college", sql.VarChar, collegeName)
+    .query(`SELECT DISTINCT Batch FROM Ledger WHERE CollegeName = @college`);
   return result.recordset.map((r) => r.Batch);
-};
+}
 
-const getSemesters = async (collegeName) => {
+async function getSemestersByCollege(collegeName) {
   const pool = await getPool();
   const result = await pool
     .request()
-    .input("CollegeName", sql.NVarChar, collegeName)
-    .query(`
-      SELECT DISTINCT Semester, SemesterID FROM Ledger
-      WHERE CollegeName = @CollegeName
-      ORDER BY SemesterID
-    `);
+    .input("college", sql.VarChar, collegeName)
+    .query(`SELECT DISTINCT Semester, SemesterID FROM Ledger WHERE CollegeName = @college ORDER BY SemesterID`);
   return result.recordset.map((r) => r.Semester);
-};
+}
+
+async function getSubHeadsByCollege(collegeName) {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("college", sql.VarChar, collegeName)
+    .query(`SELECT DISTINCT Head, ID FROM Masterheads WHERE CollegeName = @college ORDER BY ID`);
+  return result.recordset.map((r) => r.Head);
+}
+
+async function getSessions() {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT Session FROM MasterSession ORDER BY Session DESC`);
+  return result.recordset.map((r) => r.Session);
+}
 
 /**
- * Mirrors VB Display(): pulls base receipt rows (Credit, ReceiptType =
- * 'Multiple', matching the selected college/course/batch/semester/session/
- * date range), then pivots in SUM(Credit) per SubLedgers.Subhead for each
- * selected head — but batched in ONE grouped query across all matching
- * ReceiptNos, instead of VB's GetHeadvalue() being called once per
- * cell (rows × heads round trips). Also computes the footer "Total" row
- * VB builds manually at the bottom of dgvDetail.
+ * @param {{collegeName, course, batch, semester, session, dateFrom, dateTo, subHeads:string[]}} params
+ * subHeads is the set of checked items from CheckedListBox1 — each becomes a
+ * pivoted column, same as the VB.NET grid.
  */
-const getCustomSubLedgerReport = async (filters) => {
-  const {
-    collegeName,
-    dateFrom,
-    dateTo,
-    course,
-    batch,
-    semester,
-    session,
-    heads,
-  } = filters;
-
+async function getCustomSubLedgerReport({
+  collegeName,
+  course,
+  batch,
+  semester,
+  session,
+  dateFrom,
+  dateTo,
+  subHeads,
+}) {
   const pool = await getPool();
-  const baseRequest = pool.request();
+  const headerReq = pool.request().input("college", sql.VarChar, collegeName);
 
-  let query = `
-    SELECT DateEntry, ReceiptNo, IDNo, ClassRollNo, UniRollNo, StudentName, FatherName
-    FROM Ledger
-    WHERE TransactionType = 'Credit' AND ReceiptType = 'Multiple' AND CollegeName = @CollegeName
-  `;
-  baseRequest.input("CollegeName", sql.NVarChar, collegeName);
-
+  let where = `WHERE TransactionType = 'Credit' AND ReceiptType = 'Multiple' AND CollegeName = @college`;
   if (dateFrom && dateTo) {
-    query += ` AND DateEntry BETWEEN @DateFrom AND @DateTo`;
-    baseRequest.input("DateFrom", sql.DateTime, dateFrom);
-    baseRequest.input("DateTo", sql.DateTime, dateTo);
+    headerReq.input("dateFrom", sql.Date, dateFrom).input("dateTo", sql.Date, dateTo);
+    where += ` AND DateEntry BETWEEN @dateFrom AND @dateTo`;
   }
   if (course) {
-    query += ` AND Course = @Course`;
-    baseRequest.input("Course", sql.NVarChar, course);
+    headerReq.input("course", sql.VarChar, course);
+    where += ` AND Course = @course`;
   }
   if (batch) {
-    query += ` AND Batch = @Batch`;
-    baseRequest.input("Batch", sql.Int, batch);
+    headerReq.input("batch", sql.VarChar, batch);
+    where += ` AND Batch = @batch`;
   }
   if (semester) {
-    query += ` AND Semester = @Semester`;
-    baseRequest.input("Semester", sql.NVarChar, semester);
+    headerReq.input("semester", sql.VarChar, semester);
+    where += ` AND Semester = @semester`;
   }
   if (session) {
-    query += ` AND Session = @Session`;
-    baseRequest.input("Session", sql.NVarChar, session);
+    headerReq.input("session", sql.VarChar, session);
+    where += ` AND Session = @session`;
   }
 
-  query += ` ORDER BY ReceiptNo`;
+  const headerResult = await headerReq.query(`
+    SELECT DateEntry, ReceiptNo, IDNo, ClassRollNo, UniRollNo, StudentName, FatherName
+    FROM Ledger
+    ${where}
+    ORDER BY ReceiptNo
+  `);
+  const headerRows = headerResult.recordset;
+  if (headerRows.length === 0) return { rows: [], columnTotals: {}, subHeads, totalRecords: 0 };
 
-  const baseResult = await baseRequest.query(query);
-  const baseRows = baseResult.recordset;
+  // Single batched query for every (receipt, subhead) credit amount instead
+  // of the VB.NET original's per-cell GetHeadvalue() lookup.
+  const receiptNos = [...new Set(headerRows.map((r) => r.ReceiptNo))];
+  const subReq = pool.request().input("college", sql.VarChar, collegeName);
+  if (session) subReq.input("session", sql.VarChar, session);
 
-  const selectedHeads = heads && heads.length > 0 ? heads : [];
-
-  if (baseRows.length === 0) {
-    return { rows: [], headers: selectedHeads, totalRecords: 0, columnTotals: {}, grandTotal: 0 };
-  }
-
-  const receiptNos = [...new Set(baseRows.map((r) => r.ReceiptNo))];
-
-  const subRequest = pool.request();
-  subRequest.input("CollegeName", sql.NVarChar, collegeName);
-  if (session) subRequest.input("Session", sql.NVarChar, session);
-
-  const receiptParams = receiptNos
-    .map((no, i) => {
-      const key = `Receipt${i}`;
-      subRequest.input(key, sql.Int, no);
-      return `@${key}`;
-    })
-    .join(",");
-
-  let subQuery = `
-    SELECT ReceiptNo, Subhead, SUM(Credit) AS Credit
-    FROM SubLedgers
-    WHERE CollegeName = @CollegeName AND TransactionType = 'Credit'
-      AND ReceiptNo IN (${receiptParams})
-  `;
-  if (session) subQuery += ` AND Session = @Session`;
-  subQuery += ` GROUP BY ReceiptNo, Subhead`;
-
-  const subResult = await subRequest.query(subQuery);
-
-  // receiptNo -> { subhead: creditSum }
-  const subMap = {};
-  subResult.recordset.forEach((r) => {
-    if (!subMap[r.ReceiptNo]) subMap[r.ReceiptNo] = {};
-    subMap[r.ReceiptNo][r.Subhead] = Number(r.Credit) || 0;
+  const receiptParams = receiptNos.map((no, i) => {
+    const p = `receipt${i}`;
+    subReq.input(p, sql.Int, no);
+    return `@${p}`;
+  });
+  const headParams = subHeads.map((h, i) => {
+    const p = `head${i}`;
+    subReq.input(p, sql.VarChar, h);
+    return `@${p}`;
   });
 
-  const columnTotals = {};
-  selectedHeads.forEach((h) => (columnTotals[h] = 0));
+  const subResult = await subReq.query(`
+    SELECT ReceiptNo, Subhead, Credit
+    FROM SubLedgers
+    WHERE CollegeName = @college
+      AND TransactionType = 'Credit'
+      ${session ? "AND Session = @session" : ""}
+      AND ReceiptNo IN (${receiptParams.join(", ")})
+      AND Subhead IN (${headParams.join(", ")})
+  `);
+
+  // creditMap[receiptNo][subhead] = credit
+  const creditMap = new Map();
+  for (const row of subResult.recordset) {
+    if (!creditMap.has(row.ReceiptNo)) creditMap.set(row.ReceiptNo, {});
+    creditMap.get(row.ReceiptNo)[row.Subhead] = Number(row.Credit) || 0;
+  }
+
+  const columnTotals = Object.fromEntries(subHeads.map((h) => [h, 0]));
   let grandTotal = 0;
 
-  const rows = baseRows.map((r) => {
-    const headValues = {};
+  const rows = headerRows.map((r) => {
+    const amounts = {};
     let rowTotal = 0;
-    selectedHeads.forEach((h) => {
-      const val = subMap[r.ReceiptNo]?.[h] || 0;
-      headValues[h] = val;
-      rowTotal += val;
-      columnTotals[h] += val;
-    });
+    for (const head of subHeads) {
+      const credit = creditMap.get(r.ReceiptNo)?.[head] ?? 0;
+      amounts[head] = credit;
+      rowTotal += credit;
+      columnTotals[head] += credit;
+    }
     grandTotal += rowTotal;
-
-    return {
-      DateEntry: r.DateEntry,
-      ReceiptNo: r.ReceiptNo,
-      IDNo: r.IDNo,
-      ClassRollNo: r.ClassRollNo,
-      UniRollNo: r.UniRollNo,
-      StudentName: r.StudentName,
-      FatherName: r.FatherName,
-      heads: headValues,
-      total: rowTotal,
-    };
+    return { ...r, amounts, total: rowTotal };
   });
 
-  return {
-    rows,
-    headers: selectedHeads,
-    totalRecords: rows.length,
-    columnTotals,
-    grandTotal,
-  };
-};
+  return { rows, columnTotals, grandTotal, subHeads, totalRecords: rows.length };
+}
 
 module.exports = {
-  getColleges,
-  getHeads,
-  getCourses,
-  getBatches,
-  getSemesters,
+  getCoursesByCollege,
+  getBatchesByCollege,
+  getSemestersByCollege,
+  getSubHeadsByCollege,
+  getSessions,
   getCustomSubLedgerReport,
 };
