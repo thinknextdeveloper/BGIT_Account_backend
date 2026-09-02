@@ -29,29 +29,6 @@ const getCoursesByCollege = async (collegeName) => {
 
   return result.recordset;
 };
-// const getBatchesByCollegeAndCourse = async (collegeName, course) => {
-//   const pool = await getPool();
-//   const request = pool.request();
-//   request.input("CollegeName", sql.VarChar(200), collegeName);
-
-//   let query = `
-//     SELECT DISTINCT [Batch]
-//     FROM [${dbName}].[dbo].[MasterCourses]
-//     WHERE [CollegeName] = @CollegeName
-//       AND [Batch] IS NOT NULL
-//   `;
-
-//   if (course) {
-//     query += ` AND [Course] = @Course`;
-//     request.input("Course", sql.VarChar(200), course);
-//   }
-
-//   query += ` ORDER BY [Batch]`;
-
-//   const result = await request.query(query);
-//   return result.recordset;
-// };
-
 
 const getBatchesByCollegeAndCourse = async (collegeName, course) => {
   const pool = await getPool();

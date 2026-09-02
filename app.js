@@ -40,6 +40,12 @@ const allSubLedgersPendingFeeRoutes = require("./routes/allSubLedgersPendingFee"
 const hostelFacilityReportRoutes = require("./routes/hostelFacilityReport");
 const duplicateHostelBusPassRoutes = require("./routes/duplicateHostelBusPass");
 const dayBookAllSubLedgersRoutes = require("./routes/dayBookAllSubLedgers");
+const refundReportRoutes = require("./routes/refundReport");
+const feeSubLedgerRoutes = require("./routes/feeSubLedger");
+const allRecordRoutes = require("./routes/allRecordRoutes");
+const studentRegistrationRoutes = require("./routes/Studentregistrationroutes");
+
+
 const app = express();
 
 // Middleware
@@ -100,6 +106,10 @@ app.use("/api/all-sub-ledgers-pending-fee", allSubLedgersPendingFeeRoutes);
 app.use("/api/hostel-facility-report", hostelFacilityReportRoutes);
 app.use("/api/duplicate-hostel-bus-pass", duplicateHostelBusPassRoutes);
 app.use("/api/daybook-all-sub-ledgers", dayBookAllSubLedgersRoutes);
+app.use("/api/refund-report", refundReportRoutes);
+app.use("/api/fee-subledger", feeSubLedgerRoutes);
+app.use("/api/all-record", allRecordRoutes);
+app.use("/api/student-registration", studentRegistrationRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

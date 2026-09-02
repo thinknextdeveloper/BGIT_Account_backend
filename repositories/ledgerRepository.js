@@ -52,6 +52,9 @@ class LedgerRepository {
     await request.query(insertQuery);
     return true;
   }
+
+
+  
 }
 
 module.exports = new LedgerRepository();

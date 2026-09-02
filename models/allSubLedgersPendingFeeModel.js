@@ -37,22 +37,6 @@ async function getCurrentSemester(collegeName, course, batch) {
   return result.recordset[0]?.Semester ?? "";
 }
 
-// Mirrors DisplayData(): calls AllSubLedgerPendingFee, semester auto-resolved
-// via GetCurrentSemester rather than user-selected.
-// async function getAllSubLedgerPendingFee({ collegeName, course, batch }) {
-//   const pool = await getPool();
-//   const semester = await getCurrentSemester(collegeName, course, batch);
-
-//   const request = pool.request();
-//   request.input("CollegeName", sql.VarChar, collegeName || null);
-//   request.input("Course", sql.VarChar, course || null);
-//   request.input("Batch", sql.VarChar, batch || null);
-//   request.input("Semester", sql.VarChar, semester || null);
-//   request.timeout = 120000; // matches VB's cmd.CommandTimeout = 120 (seconds -> ms)
-
-//   const result = await request.execute("AllSubLedgerPendingFee");
-//   return result.recordset; // dynamic columns — passed through as-is
-// }
 
 
 async function getAllSubLedgerPendingFee({ collegeName, course, batch }) {
