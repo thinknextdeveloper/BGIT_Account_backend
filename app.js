@@ -44,6 +44,10 @@ const refundReportRoutes = require("./routes/refundReport");
 const feeSubLedgerRoutes = require("./routes/feeSubLedger");
 const allRecordRoutes = require("./routes/allRecordRoutes");
 const studentRegistrationRoutes = require("./routes/Studentregistrationroutes");
+const employeeRoutes = require("./routes/Employeeroutes");
+const idCardRoutes = require("./routes/idCardRoutes");
+const hostelBusPassRoutes = require("./routes/hostelBusPassRoutes");
+
 
 
 const app = express();
@@ -110,6 +114,10 @@ app.use("/api/refund-report", refundReportRoutes);
 app.use("/api/fee-subledger", feeSubLedgerRoutes);
 app.use("/api/all-record", allRecordRoutes);
 app.use("/api/student-registration", studentRegistrationRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/idcard", idCardRoutes);
+app.use("/api/hostel-bus-pass", hostelBusPassRoutes);
+
 
 // Health Check
 app.get("/", (req, res) => {
