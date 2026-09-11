@@ -20,10 +20,17 @@ async function connectDB() {
 
     pool = await sql.connect(config);
 
+<<<<<<< HEAD
     console.log("✅ SQL Server Connected Successfully");
     return pool;
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
+=======
+    console.log("SQL Server Connected Successfully");
+    return pool;
+  } catch (err) {
+    console.error(" Database Connection Error:", err.message);
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     throw err;
   }
 }
@@ -37,7 +44,11 @@ async function getPool() {
       if (pool) {
         try {
           await pool.close();
+<<<<<<< HEAD
         } catch (e) {}
+=======
+        } catch (e) { }
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
       }
 
       pool = await connectDB();
@@ -63,7 +74,11 @@ async function withRetry(callback, retries = 3) {
       lastError = err;
 
       console.error(
+<<<<<<< HEAD
         `❌ Database operation failed (Attempt ${attempt}/${retries}):`,
+=======
+        ` Database operation failed (Attempt ${attempt}/${retries}):`,
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
         err.message
       );
 
@@ -71,7 +86,11 @@ async function withRetry(callback, retries = 3) {
       if (pool) {
         try {
           await pool.close();
+<<<<<<< HEAD
         } catch (e) {}
+=======
+        } catch (e) { }
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 
         pool = null;
       }
@@ -94,7 +113,11 @@ async function closeDB() {
     try {
       await pool.close();
       pool = null;
+<<<<<<< HEAD
       console.log("🔒 SQL Server Connection Closed");
+=======
+      console.log("SQL Server Connection Closed");
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     } catch (err) {
       console.error("Error closing database:", err.message);
     }

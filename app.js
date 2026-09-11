@@ -34,6 +34,14 @@ const routeStopageRoutes = require("./routes/routeStopage");
 const routeWiseReportRoutes = require("./routes/routeWiseReport");
 const receiptSearchRoutes = require("./routes/receiptSearchRoutes");
 const searchByAddressRoutes = require("./routes/searchByAddressRoutes");
+<<<<<<< HEAD
+=======
+const searchStopageRoutes = require("./routes/searchStopageRoutes");
+const searchFacultyNameRoutes = require("./routes/searchFacultyNameRoutes");
+const searchFacultyIdNoRoutes = require("./routes/searchFacultyIdNoRoutes");
+const searchReceiptNoRoutes = require("./routes/searchReceiptNoRoutes");
+const searchTransactionIdRoutes = require("./routes/searchTransactionIdRoutes");
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 const studentActivityFundRoutes = require("./routes/studentActivityFundRoutes");
 const pendingRegistrationFeeRoutes = require("./routes/pendingRegistrationFee");
 const allSubLedgersPendingFeeRoutes = require("./routes/allSubLedgersPendingFee");
@@ -44,10 +52,17 @@ const refundReportRoutes = require("./routes/refundReport");
 const feeSubLedgerRoutes = require("./routes/feeSubLedger");
 const allRecordRoutes = require("./routes/allRecordRoutes");
 const studentRegistrationRoutes = require("./routes/Studentregistrationroutes");
+<<<<<<< HEAD
 const employeeRoutes = require("./routes/Employeeroutes");
 const idCardRoutes = require("./routes/idCardRoutes");
 const hostelBusPassRoutes = require("./routes/hostelBusPassRoutes");
 
+=======
+const searchNameRoutes = require("./routes/searchNameRoutes");
+const searchUniRollNoRoutes = require("./routes/searchUniRollNoRoutes");
+const searchByClassRollNoRoutes = require("./routes/searchByClassRollNoRoutes");
+const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
+>>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 
 
 const app = express();
@@ -104,6 +119,16 @@ app.use("/api/route-stopage", routeStopageRoutes);
 app.use("/api/route-wise-report", routeWiseReportRoutes);
 app.use("/api/receipt-search", receiptSearchRoutes);
 app.use("/api/search-by-address", searchByAddressRoutes);
+app.use("/api/search-stopage", searchStopageRoutes);
+app.use("/api/search-by-stopage", searchStopageRoutes);
+app.use("/api/search-faculty-name", searchFacultyNameRoutes);
+app.use("/api/search-faculty-member-name", searchFacultyNameRoutes);
+app.use("/api/search-faculty-id-no", searchFacultyIdNoRoutes);
+app.use("/api/search-faculty-id", searchFacultyIdNoRoutes);
+app.use("/api/search-receipt-no", searchReceiptNoRoutes);
+app.use("/api/search-receipt-number", searchReceiptNoRoutes);
+app.use("/api/search-transaction-id", searchTransactionIdRoutes);
+app.use("/api/search-transaction", searchTransactionIdRoutes);
 app.use("/api/student-activity-fund", studentActivityFundRoutes);
 app.use("/api/pending-registration-fee", pendingRegistrationFeeRoutes);
 app.use("/api/all-sub-ledgers-pending-fee", allSubLedgersPendingFeeRoutes);
@@ -118,6 +143,14 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/idcard", idCardRoutes);
 app.use("/api/hostel-bus-pass", hostelBusPassRoutes);
 
+app.use("/api/search-name", searchNameRoutes);
+app.use("/api/search-student-name", searchNameRoutes);
+app.use("/api/search-uni-roll-no", searchUniRollNoRoutes);
+app.use("/api/search-unirollno", searchUniRollNoRoutes);
+app.use("/api/search-by-class-roll-no", searchByClassRollNoRoutes);
+app.use("/api/search-class-roll-no", searchByClassRollNoRoutes);
+app.use("/api/search-by-id-no", searchByIdNoRoutes);
+app.use("/api/search-id-no", searchByIdNoRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
@@ -139,6 +172,10 @@ async function startServer() {
     });
   } catch (err) {
     console.error("❌ Failed to connect database");
+      console.log(` Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error(" Failed to connect database");
     console.error(err);
     process.exit(1);
   }

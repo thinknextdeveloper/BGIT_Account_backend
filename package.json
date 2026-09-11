@@ -17,5 +17,6 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js"
+    "puppeteer": "^24.17.0"
   }
 }
