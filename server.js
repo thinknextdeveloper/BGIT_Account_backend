@@ -34,14 +34,11 @@ const routeStopageRoutes = require("./routes/routeStopage");
 const routeWiseReportRoutes = require("./routes/routeWiseReport");
 const receiptSearchRoutes = require("./routes/receiptSearchRoutes");
 const searchByAddressRoutes = require("./routes/searchByAddressRoutes");
-<<<<<<< HEAD
-=======
 const searchStopageRoutes = require("./routes/searchStopageRoutes");
 const searchFacultyNameRoutes = require("./routes/searchFacultyNameRoutes");
 const searchFacultyIdNoRoutes = require("./routes/searchFacultyIdNoRoutes");
 const searchReceiptNoRoutes = require("./routes/searchReceiptNoRoutes");
 const searchTransactionIdRoutes = require("./routes/searchTransactionIdRoutes");
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 const studentActivityFundRoutes = require("./routes/studentActivityFundRoutes");
 const pendingRegistrationFeeRoutes = require("./routes/pendingRegistrationFee");
 const allSubLedgersPendingFeeRoutes = require("./routes/allSubLedgersPendingFee");
@@ -52,17 +49,14 @@ const refundReportRoutes = require("./routes/refundReport");
 const feeSubLedgerRoutes = require("./routes/feeSubLedger");
 const allRecordRoutes = require("./routes/allRecordRoutes");
 const studentRegistrationRoutes = require("./routes/Studentregistrationroutes");
-<<<<<<< HEAD
 const employeeRoutes = require("./routes/Employeeroutes");
 const idCardRoutes = require("./routes/idCardRoutes");
 const hostelBusPassRoutes = require("./routes/hostelBusPassRoutes");
 
-=======
 const searchNameRoutes = require("./routes/searchNameRoutes");
 const searchUniRollNoRoutes = require("./routes/searchUniRollNoRoutes");
 const searchByClassRollNoRoutes = require("./routes/searchByClassRollNoRoutes");
 const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 
 
 const app = express();
@@ -70,12 +64,12 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: [
-    "http://localhost:3000",
-    // "https://account-frontend-one.vercel.app"
+    "https://acc-bgietcollege.thinknextfunnel.com/",
+    // "http://localhost:3000"
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
