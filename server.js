@@ -64,7 +64,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: [
-    "https://acc-bgietcollege.thinknextfunnel.com/",
+    "https://acc-bgietcollege.thinknextfunnel.com",
     // "http://localhost:3000"
   ],
   credentials: true,
