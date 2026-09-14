@@ -60,13 +60,40 @@ const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: ["https://acc-bgietcollege.thinknextfunnel.com"],
+// Allowed origins
+const allowedOrigins = ["https://acc-bgietcollege.thinknextfunnel.com"];
+
+const corsOptions = {
+  origin: allowedOrigins,
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200
+};
+
+// Middleware
+app.use(cors(corsOptions));
+
+// Explicitly answer every preflight request BEFORE any other route/middleware
+app.options("*", cors(corsOptions));
+
+// Belt-and-suspenders: manually set CORS headers on every response.
+// Some hosting layers (e.g. cPanel/Passenger, certain proxies) can strip
+// or fail to relay preflight responses from the cors() middleware alone —
+// this guarantees the headers are present regardless.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json());
 
