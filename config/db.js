@@ -1,3 +1,141 @@
+// const sql = require("mssql/msnodesqlv8");
+// require("dotenv").config();
+
+// // SQL Server Configuration
+// const config = {
+//   connectionString:
+//     "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-UCBVR7F;Database=DBSmartCampusBGIET;Trusted_Connection=Yes;",
+// };
+
+// let pool = null;
+
+// /**
+//  * Connect to SQL Server
+//  */
+// async function connectDB() {
+//   try {
+//     if (pool && pool.connected) {
+//       return pool;
+//     }
+
+//     pool = await sql.connect(config);
+
+// <<<<<<< HEAD
+//     console.log("✅ SQL Server Connected Successfully");
+//     return pool;
+//   } catch (err) {
+//     console.error("❌ Database Connection Error:", err.message);
+// =======
+//     console.log("SQL Server Connected Successfully");
+//     return pool;
+//   } catch (err) {
+//     console.error(" Database Connection Error:", err.message);
+// >>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
+//     throw err;
+//   }
+// }
+
+// /**
+//  * Get existing pool or reconnect
+//  */
+// async function getPool() {
+//   try {
+//     if (!pool || !pool.connected) {
+//       if (pool) {
+//         try {
+//           await pool.close();
+// <<<<<<< HEAD
+//         } catch (e) {}
+// =======
+//         } catch (e) { }
+// >>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
+//       }
+
+//       pool = await connectDB();
+//     }
+
+//     return pool;
+//   } catch (err) {
+//     throw err;
+//   }
+// }
+
+// /**
+//  * Retry wrapper for database operations
+//  */
+// async function withRetry(callback, retries = 3) {
+//   let lastError;
+
+//   for (let attempt = 1; attempt <= retries; attempt++) {
+//     try {
+//       const pool = await getPool();
+//       return await callback(pool);
+//     } catch (err) {
+//       lastError = err;
+
+//       console.error(
+// <<<<<<< HEAD
+//         `❌ Database operation failed (Attempt ${attempt}/${retries}):`,
+// =======
+//         ` Database operation failed (Attempt ${attempt}/${retries}):`,
+// >>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
+//         err.message
+//       );
+
+//       // Close broken connection
+//       if (pool) {
+//         try {
+//           await pool.close();
+// <<<<<<< HEAD
+//         } catch (e) {}
+// =======
+//         } catch (e) { }
+// >>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
+
+//         pool = null;
+//       }
+
+//       // Wait before retrying
+//       if (attempt < retries) {
+//         await new Promise((resolve) => setTimeout(resolve, 1000));
+//       }
+//     }
+//   }
+
+//   throw lastError;
+// }
+
+// /**
+//  * Close DB Connection
+//  */
+// async function closeDB() {
+//   if (pool) {
+//     try {
+//       await pool.close();
+//       pool = null;
+// <<<<<<< HEAD
+//       console.log("🔒 SQL Server Connection Closed");
+// =======
+//       console.log("SQL Server Connection Closed");
+// >>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
+//     } catch (err) {
+//       console.error("Error closing database:", err.message);
+//     }
+//   }
+// }
+
+// module.exports = {
+//   sql,
+//   config,
+//   connectDB,
+//   getPool,
+//   withRetry,
+//   closeDB,
+// };
+
+
+
+
 const sql = require("mssql/msnodesqlv8");
 require("dotenv").config();
 
@@ -20,17 +158,10 @@ async function connectDB() {
 
     pool = await sql.connect(config);
 
-<<<<<<< HEAD
     console.log("✅ SQL Server Connected Successfully");
     return pool;
   } catch (err) {
     console.error("❌ Database Connection Error:", err.message);
-=======
-    console.log("SQL Server Connected Successfully");
-    return pool;
-  } catch (err) {
-    console.error(" Database Connection Error:", err.message);
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     throw err;
   }
 }
@@ -44,11 +175,7 @@ async function getPool() {
       if (pool) {
         try {
           await pool.close();
-<<<<<<< HEAD
         } catch (e) {}
-=======
-        } catch (e) { }
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
       }
 
       pool = await connectDB();
@@ -74,11 +201,7 @@ async function withRetry(callback, retries = 3) {
       lastError = err;
 
       console.error(
-<<<<<<< HEAD
         `❌ Database operation failed (Attempt ${attempt}/${retries}):`,
-=======
-        ` Database operation failed (Attempt ${attempt}/${retries}):`,
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
         err.message
       );
 
@@ -86,11 +209,7 @@ async function withRetry(callback, retries = 3) {
       if (pool) {
         try {
           await pool.close();
-<<<<<<< HEAD
         } catch (e) {}
-=======
-        } catch (e) { }
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 
         pool = null;
       }
@@ -113,11 +232,7 @@ async function closeDB() {
     try {
       await pool.close();
       pool = null;
-<<<<<<< HEAD
       console.log("🔒 SQL Server Connection Closed");
-=======
-      console.log("SQL Server Connection Closed");
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     } catch (err) {
       console.error("Error closing database:", err.message);
     }
