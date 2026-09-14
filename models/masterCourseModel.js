@@ -1,22 +1,12 @@
 const { sql, getPool } = require("../config/db");
-<<<<<<< HEAD
 const dbName = process.env.DB_DATABASE;
-=======
-
-const tablePrefix = process.env.DB_DATABASE ? `[${process.env.DB_DATABASE}].[dbo].[MasterCourses]` : `[MasterCourses]`;
-
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 const getAllColleges = async () => {
   const pool = await getPool();
   const request = pool.request();
 
   const result = await request.query(`
     SELECT DISTINCT [CollegeName]
-<<<<<<< HEAD
     FROM [${dbName}].[dbo].[MasterCourses]
-=======
-    FROM ${tablePrefix}
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     WHERE [CollegeName] IS NOT NULL
     ORDER BY [CollegeName]
   `);
@@ -48,11 +38,7 @@ const getBatchesByCollegeAndCourse = async (collegeName, course) => {
 
   const query = `
     SELECT DISTINCT [Batch]
-<<<<<<< HEAD
     FROM [${dbName}].[dbo].[MasterCourses]
-=======
-    FROM ${tablePrefix}
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     WHERE [CollegeName] = @CollegeName
       AND [Batch] IS NOT NULL
     ORDER BY [Batch]
@@ -62,10 +48,7 @@ const getBatchesByCollegeAndCourse = async (collegeName, course) => {
   return result.recordset;
 };
 
-<<<<<<< HEAD
 
-=======
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
 const getSemestersByCollegeCourseBatch = async (collegeName, course, batch) => {
   const pool = await getPool();
   const request = pool.request();
@@ -74,11 +57,7 @@ const getSemestersByCollegeCourseBatch = async (collegeName, course, batch) => {
 
   const query = `
     SELECT DISTINCT [Semester], [SemesterID]
-<<<<<<< HEAD
     FROM [${dbName}].[dbo].[MasterCourses]
-=======
-    FROM ${tablePrefix}
->>>>>>> be830c1fd273a33d13f40fcabc90c619562a8540
     WHERE [CollegeName] = @CollegeName
       AND [Batch] = @Batch
       AND [Semester] IS NOT NULL
