@@ -60,17 +60,22 @@ const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
 
 
 const app = express();
-
-// Middleware
 app.use(cors({
-  origin: [
-    "https://acc-bgietcollege.thinknextfunnel.com/",
-    // "http://localhost:3000"
-  ],
+  origin: ["https://acc-bgietcollege.thinknextfunnel.com"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+// Middleware
+// app.use(cors({
+//   origin: [
+//     "https://acc-bgietcollege.thinknextfunnel.com/",
+//     // "http://localhost:3000"
+//   ],
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"]
+// }));
 
 app.use(express.json());
 
