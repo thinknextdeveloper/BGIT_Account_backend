@@ -58,24 +58,15 @@ const searchUniRollNoRoutes = require("./routes/searchUniRollNoRoutes");
 const searchByClassRollNoRoutes = require("./routes/searchByClassRollNoRoutes");
 const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
 
-
 const app = express();
+
+// Middleware
 app.use(cors({
   origin: ["https://acc-bgietcollege.thinknextfunnel.com"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-// Middleware
-// app.use(cors({
-//   origin: [
-//     "https://acc-bgietcollege.thinknextfunnel.com/",
-//     // "http://localhost:3000"
-//   ],
-//   credentials: true,
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"]
-// }));
 
 app.use(express.json());
 
@@ -171,17 +162,11 @@ async function startServer() {
     });
   } catch (err) {
     console.error("❌ Failed to connect database");
-      console.log(` Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error(" Failed to connect database");
     console.error(err);
     process.exit(1);
   }
 }
 
-if (process.env.NODE_ENV !== "production") {
-  startServer();
-}
+startServer();
 
 module.exports = app;
