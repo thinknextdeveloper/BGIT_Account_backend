@@ -75,7 +75,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Explicitly answer every preflight request BEFORE any other route/middleware
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 // Belt-and-suspenders: manually set CORS headers on every response.
 // Some hosting layers (e.g. cPanel/Passenger, certain proxies) can strip
