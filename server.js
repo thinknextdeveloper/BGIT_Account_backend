@@ -61,7 +61,7 @@ const searchByIdNoRoutes = require("./routes/searchByIdNoRoutes");
 const app = express();
 
 // Allowed origins
-const allowedOrigins = ["https://acc-bgietcollege.thinknextfunnel.com"];
+const allowedOrigins = ["https://acc-bgietcollege.thinknextfunnel.com/"];
 
 const corsOptions = {
   origin: allowedOrigins,
